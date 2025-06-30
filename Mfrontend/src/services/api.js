@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Tạo instance axios với baseURL đúng cho user API
 const API = axios.create({
-    baseURL: 'http://localhost:8686/api/user',
+    baseURL: 'http://localhost:8686/api',
     headers: {
         'Content-Type': 'application/json'
     }
@@ -39,8 +39,10 @@ API.interceptors.response.use(
             url: error.config?.url
         });
 
-        // Chỉ xử lý 401 cho các route được bảo vệ, không xử lý cho route login
-        if (error.response?.status === 401 && !error.config.url.includes('/login')) {
+        const isChangePassword = error.config.url.includes('/change-password');
+
+        // Chỉ xử lý 401 cho các route được bảo vệ, không xử lý cho route login và change-password
+        if (error.response?.status === 401 && !error.config.url.includes('/login') && !isChangePassword) {
             localStorage.removeItem('token');
             window.location.href = '/auth';
         }
@@ -67,7 +69,7 @@ export const register = async (data) => {
 
         // Send request to backend
         console.log('API: Sending registration request to:', `${API.defaults.baseURL}/register`);
-        const response = await API.post('/register', {
+        const response = await API.post('/user/register', {
             email: data.email.trim(),
             password: data.password,
             name: data.name.trim()
@@ -76,22 +78,15 @@ export const register = async (data) => {
         // Log successful response
         console.log('API: Registration response received:', {
             status: response.status,
-            hasToken: !!response.data.token,
-            hasUser: !!response.data.user,
             message: response.data.message
         });
 
-        // Validate response data
-        if (!response.data.token || !response.data.user) {
-            console.error('API: Invalid registration response - missing token or user data');
-            throw new Error('Đăng ký không thành công - thiếu dữ liệu quan trọng');
+        // Chỉ cần trả về message, không cần token/user
+        if (response.data.message) {
+            return response.data;
+        } else {
+            throw new Error('Đăng ký không thành công - thiếu thông báo từ server');
         }
-
-        // Store token if registration is successful
-        localStorage.setItem('token', response.data.token);
-        console.log('API: Registration token stored in localStorage');
-
-        return response.data;
     } catch (error) {
         console.error('API: Registration error details:', {
             status: error.response?.status,
@@ -119,7 +114,7 @@ export const register = async (data) => {
 export const login = async (data) => {
     try {
         console.log('Attempting login with:', { email: data.email });
-        const response = await API.post('/login', data);
+        const response = await API.post('/user/login', data);
         console.log('Login response:', response.data);
 
         if (response.data.token) {
@@ -137,13 +132,14 @@ export const login = async (data) => {
 
 export const logout = () => {
     localStorage.removeItem('token');
-    window.location.href = '/auth';
+    localStorage.removeItem('user');
+    window.location.href = '/';
 };
 
 export const getUser = async () => {
     try {
         console.log('Fetching user data...');
-        const response = await API.get('/me');
+        const response = await API.get('/user/me');
         console.log('Get user response:', response.data);
         return response.data;
     } catch (error) {
@@ -155,7 +151,7 @@ export const getUser = async () => {
 export const updateProfile = async (data) => {
     try {
         console.log('Sending update profile request with data:', data);
-        const response = await API.put('/profile', data);
+        const response = await API.put('/user/profile', data);
         console.log('Update profile response:', response.data);
         return response.data;
     } catch (error) {
@@ -307,17 +303,19 @@ export const getSavedMenus = async (userId) => {
     return response.data;
 };
 
-export const getSimilarFoodsFromServer = async (targetFood, tolerance = 0.2) => {
+export const getSimilarFood = async (targetFood, tolerance = 0.2) => {
     try {
-        console.log('Getting similar foods for:', targetFood);
-        const response = await API.post('/similar-foods', { targetFood, tolerance });
-        if (!response.data || !response.data.foods) {
-            throw new Error('Không nhận được dữ liệu hợp lệ từ server');
-        }
+        const response = await MenuAPI.post('/replace-food', {
+            targetFood,
+            tolerance
+        });
         return response.data;
     } catch (error) {
-        console.error('Error getting similar foods:', error);
-        throw new Error(error.response?.data?.message || 'Không thể lấy danh sách món ăn phù hợp');
+        // Nếu backend trả về lỗi, lấy message phù hợp
+        if (error.response && error.response.data && error.response.data.detail) {
+            throw new Error(error.response.data.detail);
+        }
+        throw error;
     }
 };
 
@@ -331,4 +329,340 @@ export const getMenuByDate = async (userId, date) => {
 export const completeMeal = async (userId, date, mealName) => {
     const res = await MenuAPI.post('/menu/complete-meal', { userId, date, mealName });
     return res.data;
+};
+
+// Compliance API functions
+export const getComplianceHistory = async (userId, startDate, endDate, groupBy = 'day') => {
+    try {
+        const response = await MenuAPI.get('/compliance/history', {
+            params: {
+                userId,
+                start_date: startDate,
+                end_date: endDate,
+                group_by: groupBy
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Get compliance history error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const getComplianceGoals = async (userId) => {
+    try {
+        const response = await MenuAPI.get('/compliance/goals', {
+            params: { userId }
+        });
+        return response.data.goals;
+    } catch (error) {
+        console.error('Get compliance goals error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const getComplianceNotifications = async (userId) => {
+    try {
+        const response = await MenuAPI.get('/compliance/notifications', {
+            params: { userId }
+        });
+        return response.data.notifications;
+    } catch (error) {
+        console.error('Get compliance notifications error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const createComplianceGoal = async (goalData) => {
+    try {
+        const response = await MenuAPI.post('/compliance/goal', goalData);
+        return response.data;
+    } catch (error) {
+        console.error('Create compliance goal error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const updateComplianceGoal = async (goalId, goalData) => {
+    try {
+        const response = await MenuAPI.put(`/compliance/goal/${goalId}`, goalData);
+        return response.data;
+    } catch (error) {
+        console.error('Update compliance goal error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const deleteComplianceGoal = async (goalId) => {
+    try {
+        const response = await MenuAPI.delete(`/compliance/goal/${goalId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Delete compliance goal error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const getComplianceStats = async (userId) => {
+    try {
+        const response = await MenuAPI.get('/compliance/stats', {
+            params: { userId }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Get compliance stats error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+// Lấy thông báo nhắc nhở bữa ăn cho user
+export const getNotifications = async (userId) => {
+    try {
+        // Gọi API backend để lấy notifications
+        const response = await MenuAPI.get('/notifications', { params: { userId } });
+        // Trả về mảng notifications
+        return response.data.notifications;
+    } catch (error) {
+        console.error('Get notifications error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const searchFoods = async (searchParams) => {
+    try {
+        console.log('=== Search Foods API Call ===');
+        console.log('Original search params:', JSON.stringify(searchParams, null, 2));
+
+        // Chỉ giữ lại các tham số có giá trị.
+        const cleanedParams = {};
+        for (const key in searchParams) {
+            const value = searchParams[key];
+
+            // Bỏ qua null, undefined, chuỗi rỗng, và mảng rỗng.
+            if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+                continue;
+            }
+
+            // Đối với các trường số, đảm bảo chúng là số.
+            if (['min_calories', 'max_calories', 'min_protein', 'max_protein', 'min_carbs', 'max_carbs', 'min_fat', 'max_fat'].includes(key)) {
+                const numValue = Number(value);
+                if (!isNaN(numValue)) {
+                    cleanedParams[key] = numValue;
+                }
+            } else {
+                cleanedParams[key] = value;
+            }
+        }
+
+
+        console.log('Cleaned params to be sent:', JSON.stringify(cleanedParams, null, 2));
+
+        const response = await MenuAPI.post('/search-foods', cleanedParams);
+        return response.data;
+    } catch (error) {
+        console.error('Search foods error:', {
+            message: error.message,
+            searchParams: searchParams,
+            status: error.response?.status,
+            url: error.config?.url,
+            errorData: error.response?.data // Thêm log chi tiết từ backend
+        });
+        throw error;
+    }
+};
+
+// Lấy tổng số lượng tài khoản user (không phải admin)
+export const getTotalUsers = async () => {
+    try {
+        const response = await API.get('user/total');
+        console.log('[API] Response getTotalUsers:', response.data);
+        // Sửa lại dòng này cho đúng với backend
+        return response.data.data.totalUsers;
+    } catch (error) {
+        console.error('Get total users error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+// Lấy chi tiết món ăn theo id
+export const getFoodDetail = async (id) => {
+    try {
+        const response = await API.get(`/foods/${id}`);
+        return response.data.data;
+    } catch (error) {
+        console.error('Get food detail error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+// Lấy danh sách tất cả món ăn
+export const getAllFoods = async () => {
+    try {
+        const response = await API.get('/foods/');
+        return response.data.data;
+    } catch (error) {
+        console.error('Get all foods error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+// Cập nhật món ăn theo id (có upload ảnh)
+export const updateFood = async (id, data, imageFile = null) => {
+    try {
+        console.log('[API] Updating food with ID:', id);
+        console.log('[API] Update data:', data);
+
+        const formData = new FormData();
+
+        // Add image file if provided
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        // Add all other data as JSON string
+        const dataToSend = { ...data };
+
+        // Remove image field from data if we're uploading a new image
+        if (imageFile) {
+            delete dataToSend.image;
+        }
+
+        formData.append('data', JSON.stringify(dataToSend));
+
+        const response = await API.put(`/foods/${id}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        console.log('[API] Update food response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('[API] Update food error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+// Xóa món ăn theo ID
+export const deleteFood = async (id) => {
+    try {
+        console.log(`[API] Deleting food with ID: ${id}`);
+        const response = await API.delete(`/foods/${id}`);
+        console.log('[API] Delete food response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('[API] Delete food error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+// Lấy danh sách tất cả người dùng (cho admin)
+export const getUsers = async () => {
+    try {
+        console.log('[API] Fetching all users...');
+        const response = await API.get('/admin/users');
+        console.log('[API] Get users response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('[API] Get users error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const createFood = async (data, imageFile = null) => {
+    try {
+        console.log('[API] Creating new food with data:', data);
+        console.log('[API] Image file:', imageFile);
+
+        const formData = new FormData();
+
+        // Add image file if provided
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        // Add all other data as JSON string
+        const dataToSend = { ...data };
+
+        // Remove image field from data if we're uploading a new image
+        if (imageFile) {
+            delete dataToSend.image;
+        }
+
+        formData.append('data', JSON.stringify(dataToSend));
+
+        console.log('[API] FormData contents for create:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`[API] ${key}:`, value);
+        }
+
+        const response = await API.post('/foods', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        console.log('[API] Create food response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('[API] Create food error:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+export const getShoppingList = async (userId, startDate, endDate) => {
+    const response = await MenuAPI.get('/shopping-list', {
+        params: {
+            userId,
+            start_date: startDate,
+            end_date: endDate
+        }
+    });
+    return response.data;
+};
+
+export const chatWithAI = async (messages, userProfile = null) => {
+    const res = await MenuAPI.post('/ai-chat', {
+        messages, // gửi toàn bộ lịch sử chat
+        user_profile: userProfile
+    });
+    return res.data.response;
+};
+
+export const forgotPassword = async (email) => {
+    return await API.post('/user/forgot-password', { email });
+};
+
+export const resetPassword = async (token, newPassword) => {
+    return await API.post('/user/reset-password', { token, password: newPassword });
+};
+
+export const changePassword = async ({ currentPassword, newPassword }) => {
+    return await API.put('/user/change-password', { currentPassword, newPassword });
+};
+
+// Lấy chi tiết người dùng theo ID (cho admin)
+export const getUserById = async (id) => {
+    try {
+        console.log(`[API] Fetching user by ID: ${id}`);
+        const response = await API.get(`/admin/users/${id}`);
+        console.log('[API] Get user by ID response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error(`[API] Get user by ID error for ID ${id}:`, error.response?.data || error.message);
+        throw error;
+    }
+};
+
+// Cập nhật người dùng bởi admin
+export const updateUser = async (id, data) => {
+    try {
+        console.log(`[API] Updating user ${id} with data:`, data);
+        const response = await API.put(`/admin/users/${id}`, data);
+        console.log('[API] Update user response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error(`[API] Update user error for ID ${id}:`, error.response?.data || error.message);
+        throw error;
+    }
 };

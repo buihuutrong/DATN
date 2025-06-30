@@ -1,0 +1,134 @@
+.adminContainer {
+    display: flex;
+    min-height: 100vh;
+    background: #f6f8fa;
+}
+
+.sidebar {
+    width: 240px;
+    background: linear-gradient(135deg, #1e293b 80%, #0ea5e9 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 0 16px 0;
+    box-shadow: 2px 0 16px rgba(30, 41, 59, 0.08);
+    z-index: 10;
+}
+
+.logo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    margin-bottom: 32px;
+    padding-left: 8px;
+    border-left: 4px solid #38bdf8;
+    height: 64px;
+}
+
+.logoMain {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #38bdf8;
+    line-height: 1;
+    letter-spacing: 2px;
+}
+
+.logoSub {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #bae6fd;
+    margin-top: 2px;
+    letter-spacing: 1px;
+}
+
+.menu {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.menuItem:hover,
+.menuItem.active {
+    background: #0ea5e9;
+    color: #fff;
+}
+
+.logoutBtn {
+    margin-top: auto;
+    margin-bottom: 16px;
+    padding: 10px 24px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.logoutBtn:hover {
+    background: #dc2626;
+}
+
+.header {
+    width: 100%;
+    height: 80px;
+    background: linear-gradient(90deg, #f8fafc 60%, #e0f2fe 100%);
+    box-shadow: 0 2px 8px rgba(30, 41, 59, 0.06);
+    display: flex;
+    align-items: center;
+    padding: 0 40px;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1e293b;
+    z-index: 5;
+    border-bottom: 2px solid #e0f2fe;
+}
+
+.headerText {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0ea5e9;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.mainContent {
+    flex: 1;
+    padding: 32px 40px;
+    background: #f6f8fa;
+    min-height: 100vh;
+}
+
+@media (max-width: 900px) {
+    .adminContainer {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 16px 8px;
+    }
+
+    .mainContent {
+        padding: 16px 8px;
+    }
+}

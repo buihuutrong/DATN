@@ -154,8 +154,8 @@ const SavedMenusPage = ({ user }) => {
 
             {/* Modal xem chi tiết thực đơn */}
             {selectedMenu && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
+                <div className="modal-overlay" onClick={handleCloseDetail} style={{ cursor: 'pointer' }}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <h3>Chi tiết thực đơn ngày {selectedMenu.date}</h3>
                         <button onClick={handleCloseDetail} className="close-modal">Đóng</button>
                         <div><b>Ghi chú:</b> {selectedMenu.note || ''}</div>

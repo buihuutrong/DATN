@@ -6,6 +6,9 @@ const { protect, authorize } = require('../middleware/auth'); // Import protect 
 // Định nghĩa route cho đăng ký
 router.post('/register', userController.register);
 
+// Route xác thực email
+router.get('/verify-email', userController.verifyEmail);
+
 router.post('/login', userController.login);
 
 // Route lấy thông tin người dùng hiện tại (yêu cầu xác thực)
@@ -28,5 +31,16 @@ router.get('/progress', protect, userController.getProgress);
 router.post('/menus', protect, userController.createMenu);
 
 router.post('/similar-foods', userController.getSimilarFoods);
+
+// Get total number of users
+router.get('/total', protect, authorize('admin'), userController.getTotalUsers);
+
+// Quên mật khẩu
+router.post('/forgot-password', userController.forgotPassword);
+// Đặt lại mật khẩu
+router.post('/reset-password', userController.resetPassword);
+
+// Đổi mật khẩu
+router.put('/change-password', protect, userController.changePassword);
 
 module.exports = router;

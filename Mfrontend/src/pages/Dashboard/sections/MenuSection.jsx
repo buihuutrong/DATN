@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { getUser, updateProfile, suggestFoods, optimizeMenu, saveMenu, getSavedMenus, getSimilarFoodsFromServer } from '../../../services/api';
+import { getUser, updateProfile, suggestFoods, optimizeMenu, saveMenu, getSavedMenus, getSimilarFood, getMenuByDate } from '../../../services/api';
 import './MenuSection.css';
 import axios from 'axios';
+import MealTimeSelector from "../../../components/MealTimeSelector";
+import FoodSearch from '../../../components/FoodSearch';
 
 const BACKEND_URL = "http://localhost:8686";
 
-const MenuSection = ({ user }) => {
+const MenuSection = ({ user, menuByDate, setMenuByDate, fetchMenuByDate, selectedDate, setSelectedDate }) => {
     console.log('MenuSection received user:', user);
-    const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedMeal, setSelectedMeal] = useState(null);
     const [weeklyMenu, setWeeklyMenu] = useState(() => {
         // Khôi phục thực đơn từ localStorage khi component mount
@@ -45,6 +46,15 @@ const MenuSection = ({ user }) => {
     const [selectedMealForReplacement, setSelectedMealForReplacement] = useState(null);
     const [showErrorModal, setShowErrorModal] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [mealTimes, setMealTimes] = useState({});
+    const [menu, setMenu] = useState(null);
+    const [showConfirmOverwrite, setShowConfirmOverwrite] = useState(false);
+    const [pendingMenuData, setPendingMenuData] = useState(null);
+    const [showMealDetails, setShowMealDetails] = useState(false);
+    const [showFoodSearch, setShowFoodSearch] = useState(false);
+    const [selectedMealForSearch, setSelectedMealForSearch] = useState(null);
+    const [selectedFoodIndex, setSelectedFoodIndex] = useState(null);
+    const [showFoodSearchModal, setShowFoodSearchModal] = useState(false);
     const mealNames = [
         'Bữa sáng',
         'Bữa phụ 1',
@@ -58,7 +68,8 @@ const MenuSection = ({ user }) => {
     const meals = ['Bữa sáng', 'Bữa trưa', 'Bữa tối'];
 
     const getDateString = (date) => {
-        return date.toISOString().split('T')[0];
+        // Lấy ngày theo local time, định dạng yyyy-mm-dd
+        return date.toLocaleDateString('en-CA');
     };
 
     const handleDateClick = (date) => {
@@ -217,20 +228,16 @@ const MenuSection = ({ user }) => {
             response.foods.forEach((mealFoods, mealIdx) => {
                 const date = new Date();
                 date.setDate(date.getDate() + Math.floor(mealIdx / mealsPerDay));
-                const dateString = date.toISOString().split('T')[0];
+                const dateString = date.toLocaleDateString('en-CA'); // Đảm bảo dùng local date
                 const mealIndex = mealIdx % mealsPerDay;
                 let mealName = dynamicMealNames[mealIndex];
                 if (!formattedMenu[dateString]) {
                     formattedMenu[dateString] = {};
                 }
                 formattedMenu[dateString][mealName] = mealFoods.map(food => ({
-                    name: food.name,
-                    image: food.image,
-                    calories: food.calories,
-                    protein: food.protein,
-                    carbs: food.carbs,
-                    fat: food.fat,
-                    ingredients: food.ingredients || []
+                    ...food,
+                    ingredients: food.ingredients || [],
+                    instructions: food.instructions || []
                 }));
             });
 
@@ -279,15 +286,73 @@ const MenuSection = ({ user }) => {
         try {
             const dateString = getDateString(selectedDate);
             const menuData = weeklyMenu[dateString];
+            console.log('=== DEBUG SAVE MENU ===');
+            console.log('user:', user);
+            console.log('user._id:', user._id);
+            console.log('user.id:', user.id);
+            console.log('user.email:', user.email);
+            console.log('selectedDate:', selectedDate);
+            console.log('dateString:', dateString);
+            console.log('weeklyMenu keys:', Object.keys(weeklyMenu));
+            console.log('menuData:', menuData);
+            console.log('=======================');
             if (!menuData) {
                 setError('Không có thực đơn để lưu');
                 return;
             }
             // Chuẩn hóa dữ liệu gửi lên backend
-            const meals = Object.entries(menuData).map(([mealName, foods]) => ({
-                mealName,
-                foods
-            }));
+            const getMealKey = (mealName, mealObj) => {
+                if (mealObj && mealObj.mealKey) return mealObj.mealKey; // Ưu tiên lấy mealKey chuẩn nếu có
+                const lower = mealName.toLowerCase();
+                if (lower.includes('sáng') && !lower.includes('phụ')) return 'breakfast';
+                if (lower.includes('trưa')) return 'lunch';
+                if (lower.includes('tối') && !lower.includes('phụ') && !lower.includes('muộn')) return 'dinner';
+                if (lower.includes('phụ sáng')) return 'morningSnack';
+                if (lower.includes('phụ chiều')) return 'afternoonSnack';
+                if (lower.includes('phụ tối')) return 'eveningSnack';
+                if (lower.includes('tối muộn')) return 'lateDinner';
+                if (lower.match(/phụ\s*1/)) return 'snack1';
+                if (lower.match(/phụ\s*2/)) return 'snack2';
+                if (lower.match(/phụ\s*3/)) return 'snack3';
+                return '';
+            };
+
+            console.log('mealTimes trước khi lưu:', mealTimes);
+            const meals = Object.entries(menuData).map(([mealName, mealObj]) => {
+                const mealKey = getMealKey(mealName, mealObj);
+                const mealTime = mealTimes[mealKey] || '';
+                return {
+                    mealName,
+                    foods: mealObj.foods || mealObj,
+                    mealTime,
+                    mealKey,
+                    completed: false, // Luôn reset trạng thái khi lưu menu mới
+                    completedAt: null
+                };
+            });
+            console.log('meals gửi lên backend:', meals);
+            // Kiểm tra nếu đã có menu cho ngày này và có meal đã hoàn thành
+            const oldMenu = menuByDate[dateString];
+            const hasCompleted = oldMenu && oldMenu.meals && oldMenu.meals.some(m => m.completed);
+            if (hasCompleted) {
+                setPendingMenuData({
+                    userId: user._id || user.id || user.email,
+                    date: dateString,
+                    meals,
+                    totalNutrition: meals.reduce((acc, meal) => {
+                        meal.foods.forEach(food => {
+                            acc.calories += food.calories || 0;
+                            acc.protein += food.protein || 0;
+                            acc.carbs += food.carbs || 0;
+                            acc.fat += food.fat || 0;
+                        });
+                        return acc;
+                    }, { calories: 0, protein: 0, carbs: 0, fat: 0 }),
+                    note: ''
+                });
+                setShowConfirmOverwrite(true);
+                return;
+            }
             // Tính tổng dinh dưỡng
             const totalNutrition = meals.reduce((acc, meal) => {
                 meal.foods.forEach(food => {
@@ -298,16 +363,29 @@ const MenuSection = ({ user }) => {
                 });
                 return acc;
             }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
-            // Gọi API chuẩn hóa
+
+            // Gọi API lưu thực đơn
             const res = await saveMenu({
                 userId: user._id || user.id || user.email,
                 date: dateString,
                 meals,
-                totalNutrition,
+                totalNutrition: meals.reduce((acc, meal) => {
+                    meal.foods.forEach(food => {
+                        acc.calories += food.calories || 0;
+                        acc.protein += food.protein || 0;
+                        acc.carbs += food.carbs || 0;
+                        acc.fat += food.fat || 0;
+                    });
+                    return acc;
+                }, { calories: 0, protein: 0, carbs: 0, fat: 0 }),
                 note: ''
             });
+
             if (res.menuId) {
                 alert('Lưu thực đơn thành công!');
+                localStorage.removeItem(`menuDraft_${user._id || user.id || user.email}_${dateString}`);
+                await fetchMenuByDate(dateString);
+                setSelectedDate(new Date(dateString)); // đồng bộ ngày với Dashboard
             } else {
                 setError(res.error || 'Lưu thực đơn thất bại');
             }
@@ -632,108 +710,47 @@ const MenuSection = ({ user }) => {
         return result;
     };
 
-    const handleEditMeal = async (date, meal, foodIndex = null) => {
+    // Thay thế handleEditMeal bằng logic mới đơn giản
+    const handleEditMeal = async (dateString, meal, foodIndex) => {
+        console.log('== Nhấn nút thay đổi ==', { dateString, meal, foodIndex });
         try {
             setLoading(true);
             setError(null);
 
-            // Kiểm tra xem có mealTargets không
-            if (!mealTargets) {
-                console.log('No mealTargets, calculating new ones');
-                if (!user?.nutritionProfile) {
-                    showError('Vui lòng cập nhật hồ sơ dinh dưỡng trước khi thay đổi món');
-                    return;
-                }
-                const newMealTargets = allocateMealMacros(
-                    user.nutritionProfile.dailyCalorieNeeds,
-                    user.nutritionProfile.macroRatio,
-                    user.nutritionProfile.weight,
-                    mealsPerDay
-                );
-                setMealTargets(newMealTargets);
-                console.log('New mealTargets:', newMealTargets);
-            }
-
-            // Lấy thông tin dinh dưỡng mục tiêu của bữa ăn
-            const mealNames = getMealNames();
-            const mealIndex = mealNames.indexOf(meal);
-            console.log('Meal index:', mealIndex, 'for meal:', meal);
-
-            if (mealIndex === -1) {
-                showError('Không tìm thấy thông tin bữa ăn');
+            // Lấy món ăn hiện tại
+            const currentFood = weeklyMenu[dateString]?.[meal]?.[foodIndex];
+            console.log('== currentFood ==', currentFood);
+            if (!currentFood) {
+                showError('Không tìm thấy món ăn để thay thế');
                 return;
             }
-
-            const mealTarget = mealTargets[mealIndex];
-            console.log('Meal target:', mealTarget);
-
-            if (!mealTarget) {
-                showError('Không tìm thấy thông tin dinh dưỡng mục tiêu cho bữa này');
-                return;
+            // Bổ sung tự động trường _id nếu thiếu hoặc nếu có id/dbId thì ưu tiên dùng id gốc
+            if (!currentFood._id || currentFood.id || currentFood.dbId) {
+                if (currentFood.id) {
+                    currentFood._id = currentFood.id;
+                } else if (currentFood.dbId) {
+                    currentFood._id = currentFood.dbId;
+                } else {
+                    currentFood._id = `temp_${Date.now()}_${currentFood.name?.replace(/\s+/g, '_') || 'food'}`;
+                }
             }
 
-            // Nếu đang thay đổi một món cụ thể
-            if (foodIndex !== null) {
-                const currentMeal = weeklyMenu[date][meal];
-                const targetFood = currentMeal[foodIndex];
-                if (!targetFood) {
-                    showError('Không tìm thấy món ăn cần thay đổi');
-                    setLoading(false);
-                    return;
-                }
-                try {
-                    // Gọi API backend để lấy danh sách món phù hợp
-                    const res = await getSimilarFoodsFromServer(targetFood, 0.2);
-                    const similarFoods = res.foods || [];
-                    if (!similarFoods.length) {
-                        showError('Không tìm thấy món ăn phù hợp để thay thế. Vui lòng thử lại sau.');
-                        setLoading(false);
-                        return;
-                    }
-                    setReplacementFoods(similarFoods);
-                    setIsReplacingFood(true);
-                    setSelectedMealForReplacement({ date, meal, foodIndex });
-                    setCurrentMealTarget(targetFood);
-                } catch (err) {
-                    showError('Không thể lấy danh sách món ăn phù hợp');
-                } finally {
-                    setLoading(false);
-                }
-                return;
-            } else {
-                // Nếu đang thay đổi toàn bộ bữa ăn
-                // Lọc các món ăn có thể phù hợp với bữa này
-                const suitableFoods = availableFoods.filter(food => {
-                    return food.calories <= mealTarget.calories * 1.5 &&
-                        food.protein <= mealTarget.protein * 1.5 &&
-                        food.carbs <= mealTarget.carbs * 1.5 &&
-                        food.fat <= mealTarget.fat * 1.5;
-                });
+            // Gọi API backend để tìm món thay thế
+            const similarFood = await getSimilarFood(currentFood, 0.2);
+            console.log('== similarFood trả về ==', similarFood);
 
-                if (suitableFoods.length === 0) {
-                    showError('Không tìm thấy món ăn phù hợp với hàm lượng dinh dưỡng của bữa này');
-                    return;
-                }
-
-                // Sử dụng GA để tìm tổ hợp món ăn tối ưu
-                const optimizedMeal = optimizeMealCombination(suitableFoods, mealTarget);
-
-                if (!optimizedMeal || optimizedMeal.length === 0) {
-                    showError('Không thể tạo được bữa ăn phù hợp với yêu cầu dinh dưỡng');
-                    return;
-                }
-
-                // Cập nhật thực đơn với tổ hợp món ăn mới
+            // Nếu tìm được món thay thế, cập nhật vào menu
+            if (similarFood) {
                 const updatedMenu = { ...weeklyMenu };
-                if (!updatedMenu[date]) {
-                    updatedMenu[date] = {};
-                }
-                updatedMenu[date][meal] = optimizedMeal;
+                updatedMenu[dateString][meal][foodIndex] = similarFood;
                 setWeeklyMenu(updatedMenu);
+                console.log('== Đã cập nhật menu ==', updatedMenu);
+            } else {
+                console.log('== Không tìm thấy món thay thế ==');
             }
-        } catch (err) {
-            console.error('Error in handleEditMeal:', err);
-            showError('Có lỗi xảy ra khi thay đổi món ăn');
+        } catch (error) {
+            console.error('== Lỗi khi thay đổi món ==', error);
+            showError(error.message || 'Không tìm thấy món thay thế phù hợp');
         } finally {
             setLoading(false);
         }
@@ -865,6 +882,7 @@ const MenuSection = ({ user }) => {
                         </div>
                     ))}
                 </div>
+
             </div>
         );
     };
@@ -885,6 +903,19 @@ const MenuSection = ({ user }) => {
         return mealNames.slice(0, mealsPerDay);
     };
 
+    // Thêm hàm xóa món ăn khỏi bữa
+    const handleDeleteFood = (date, meal, foodIndex) => {
+        setWeeklyMenu(prev => {
+            const newMenu = { ...prev };
+            if (newMenu[date] && newMenu[date][meal]) {
+                console.log('Trước khi xóa:', JSON.stringify(newMenu[date][meal]));
+                newMenu[date][meal] = newMenu[date][meal].filter((_, idx) => idx !== foodIndex);
+                console.log('Sau khi xóa:', JSON.stringify(newMenu[date][meal]));
+            }
+            return newMenu;
+        });
+    };
+
     // Sửa renderMealList để dùng getMealNames()
     const renderMealList = () => {
         if (!isMenuCreatedForSelectedDate()) {
@@ -898,64 +929,113 @@ const MenuSection = ({ user }) => {
                 {dynamicMealNames.map((meal, idx) => {
                     const mealData = dayMenu[meal];
                     const isSelected = selectedMeal === meal;
+                    const totalNutrition = mealData && mealData.length > 0
+                        ? mealData.reduce(
+                            (acc, food) => ({
+                                calories: acc.calories + (food.calories || 0),
+                                protein: acc.protein + (food.protein || 0),
+                                carbs: acc.carbs + (food.carbs || 0),
+                                fat: acc.fat + (food.fat || 0),
+                            }),
+                            { calories: 0, protein: 0, carbs: 0, fat: 0 }
+                        )
+                        : { calories: 0, protein: 0, carbs: 0, fat: 0 };
+                    const mealTarget = mealTargets ? mealTargets[idx] : null;
                     return (
                         <div
                             key={meal}
-                            className={`meal-item ${isSelected ? 'selected' : ''} ${mealData ? 'has-data' : ''}`}
+                            className={`meal-item ${isSelected ? 'selected' : ''} ${mealData && mealData.length > 0 ? 'has-data' : ''}`}
                             onClick={() => handleMealClick(meal)}
                         >
                             <div className="meal-header">
                                 <h3>{meal}</h3>
-                                <div className="meal-header-actions">
-                                    {mealData && (
-                                        <>
-                                            <span className="meal-calories">
-                                                {mealData.reduce((sum, f) => sum + f.calories, 0)} kcal
-                                            </span>
-                                            <button
-                                                className="edit-meal-button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEditMeal(dateString, meal);
-                                                }}
-                                            >
-                                                <i className="fas fa-exchange-alt"></i>
-                                                Thay đổi
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
+                                <button
+                                    className="edit-meal-button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddFood(selectedDate, meal);
+                                    }}
+                                >
+                                    <i className="fas fa-plus"></i> Thêm món
+                                </button>
+                                {/* <button
+                                    className="edit-meal-button"
+                                    style={{ marginLeft: 8, background: '#e0e7ff', color: '#1e40af', border: '1px solid #a5b4fc', borderRadius: 8, padding: '6px 12px', fontWeight: 600, cursor: 'pointer' }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditMeal(getDateString(selectedDate), meal);
+                                    }}
+                                >
+                                    <i className="fas fa-random"></i> Thay đổi
+                                </button> */}
                             </div>
                             {mealData && mealData.length > 0 && (
                                 <div className="meal-details">
-                                    {mealData.map((food, i) => (
-                                        <div key={i} className="meal-food-block">
-                                            <div className="meal-food-name">{food.name}</div>
-                                            <div className="meal-food-image">
-                                                <img
-                                                    src={food.image.startsWith('http') ? food.image : `${BACKEND_URL}${food.image}`}
-                                                    alt={food.name}
-                                                    className="meal-food-image clickable"
-                                                    onClick={() => setSelectedFood(food)}
-                                                />
+                                    {mealData.map((food, i) =>
+                                        food && typeof food === 'object' ? (
+                                            <div key={food._id || (food.name + '-' + food.calories + '-' + i)} className="meal-food-block">
+                                                <div className="meal-food-name" style={{ marginBottom: '10px' }}>{food.name}</div>
+                                                <div className="meal-food-image-and-macros" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                    <img
+                                                        src={food.image.startsWith('http') ? food.image : `${BACKEND_URL}${food.image}`}
+                                                        alt={food.name}
+                                                        className="meal-food-image clickable styled-food-image"
+                                                        onClick={() => setSelectedFood(food)}
+                                                    />
+                                                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginTop: '10px', fontSize: '1rem' }}>
+                                                        <div><span className="font-semibold text-blue-600">P</span>: {food.protein}g</div>
+                                                        <div><span className="font-semibold text-green-600">C</span>: {food.carbs}g</div>
+                                                        <div><span className="font-semibold text-yellow-600">F</span>: {food.fat}g</div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ width: '100%', textAlign: 'center', marginTop: '18px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                                                    <button
+                                                        className="edit-food-button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditMeal(dateString, meal, i);
+                                                        }}
+                                                    >
+                                                        <i className="fas fa-exchange-alt"></i>
+                                                        Thay đổi
+                                                    </button>
+                                                    <button
+                                                        className="delete-food-button"
+                                                        style={{ marginLeft: 8, background: '#ffebee', color: '#c62828', border: '1px solid #ffcdd2', borderRadius: 8, padding: '6px 12px', fontWeight: 600, cursor: 'pointer' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteFood(dateString, meal, i);
+                                                        }}
+                                                    >
+                                                        Xóa
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="meal-macros">
-                                                <span>P: {food.protein}g</span>
-                                                <span>C: {food.carbs}g</span>
-                                                <span>F: {food.fat}g</span>
-                                            </div>
-                                            <button
-                                                className="edit-food-button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEditMeal(dateString, meal, i);
-                                                }}
-                                            >
-                                                <i className="fas fa-exchange-alt"></i>
-                                                Thay đổi
-                                            </button>
+                                        ) : null
+                                    )}
+                                </div>
+                            )}
+                            {mealTarget && mealData && mealData.length > 0 && (
+                                <div style={{ margin: '18px 0 8px 0', textAlign: 'center' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: 4 }}>So sánh dinh dưỡng bữa ăn</div>
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: 24, fontSize: '1rem' }}>
+                                        <div>
+                                            <span style={{ color: '#2563eb', fontWeight: 600 }}>Calo</span>: {totalNutrition.calories} / {Math.round(mealTarget.calories)} kcal
+                                            <span style={{ color: '#888', marginLeft: 6 }}>({Math.round((totalNutrition.calories / mealTarget.calories) * 100)}%)</span>
                                         </div>
-                                    ))}
+                                        <div>
+                                            <span style={{ color: '#2563eb', fontWeight: 600 }}>P</span>: {totalNutrition.protein} / {Math.round(mealTarget.protein)}g
+                                            <span style={{ color: '#888', marginLeft: 6 }}>({Math.round((totalNutrition.protein / mealTarget.protein) * 100)}%)</span>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: '#16a34a', fontWeight: 600 }}>C</span>: {totalNutrition.carbs} / {Math.round(mealTarget.carbs)}g
+                                            <span style={{ color: '#888', marginLeft: 6 }}>({Math.round((totalNutrition.carbs / mealTarget.carbs) * 100)}%)</span>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: '#eab308', fontWeight: 600 }}>F</span>: {totalNutrition.fat} / {Math.round(mealTarget.fat)}g
+                                            <span style={{ color: '#888', marginLeft: 6 }}>({Math.round((totalNutrition.fat / mealTarget.fat) * 100)}%)</span>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1135,14 +1215,18 @@ const MenuSection = ({ user }) => {
 
             // Điều chỉnh macro theo loại bữa ăn
             if (mealTypes[i] === 'breakfast') {
+                // Bữa sáng: tăng carbs, giảm fat
                 carbsGrams = Math.min(carbsGrams * 1.2, mealCalories * 0.65 / 4);
                 fatGrams = Math.max(fatGrams * 0.8, mealCalories * 0.15 / 9);
             } else if (mealTypes[i] === 'lunch') {
+                // Bữa trưa: đảm bảo protein tối thiểu
                 proteinGrams = Math.max(proteinGrams, mealCalories * 0.2 / 4);
             } else if (mealTypes[i] === 'dinner') {
+                // Bữa tối: tăng protein, giảm carbs
                 proteinGrams = Math.max(proteinGrams * 1.2, mealCalories * 0.2 / 4);
                 carbsGrams = Math.min(carbsGrams * 0.8, mealCalories * 0.45 / 4);
             } else if (['midmorning', 'afternoon', 'evening', 'snack'].includes(mealTypes[i])) {
+                // Bữa phụ: tăng fat và protein
                 fatGrams = Math.min(fatGrams * 1.2, mealCalories * 0.4 / 9);
                 proteinGrams = Math.max(proteinGrams * 1.1, mealCalories * 0.2 / 4);
             }
@@ -1286,58 +1370,168 @@ const MenuSection = ({ user }) => {
         }
     };
 
+    // Modal xác nhận ghi đè
+    {
+        showConfirmOverwrite && (
+            <div className="modal-overlay">
+                <div className="modal-content">
+                    <h3>Bạn đã có thực đơn cho hôm nay rồi, bạn vẫn muốn thay đổi chứ?</h3>
+                    <button
+                        onClick={async () => {
+                            setShowConfirmOverwrite(false);
+                            if (pendingMenuData) {
+                                const res = await saveMenu(pendingMenuData);
+                                if (res.menuId) {
+                                    alert('Lưu thực đơn thành công!');
+                                    localStorage.removeItem(`menuDraft_${user._id || user.id || user.email}_${getDateString(selectedDate)}`);
+                                    await fetchMenuByDate(pendingMenuData.date);
+                                } else {
+                                    setError(res.error || 'Lưu thực đơn thất bại');
+                                }
+                            }
+                            setPendingMenuData(null);
+                        }}
+                        style={{ marginRight: 12, background: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 500 }}
+                    >
+                        Đồng ý
+                    </button>
+                    <button
+                        onClick={() => {
+                            setShowConfirmOverwrite(false);
+                            setPendingMenuData(null);
+                        }}
+                        style={{ background: '#e5e7eb', color: '#333', border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 500 }}
+                    >
+                        Không, quay lại
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    // Hàm lấy menu từ backend hoặc localStorage khi mount
+    useEffect(() => {
+        const dateString = getDateString(selectedDate);
+        const fetchOrRestoreMenu = async () => {
+            // Nếu đã có menu cho ngày này trong weeklyMenu, không fetch lại nữa
+            if (weeklyMenu[dateString] && Object.keys(weeklyMenu[dateString]).length > 0) {
+                return;
+            }
+            // Ưu tiên lấy từ backend
+            const res = await fetchMenuByDate(dateString);
+            if (res && res.menu) {
+                setMenu(res.menu);
+                setWeeklyMenu(prev => ({
+                    ...prev, [dateString]: res.menu.meals.reduce((acc, meal) => {
+                        acc[meal.mealName] = meal.foods;
+                        return acc;
+                    }, {})
+                }));
+            } else {
+                // Nếu không có, lấy bản nháp từ localStorage
+                const draft = localStorage.getItem(`menuDraft_${user._id || user.id || user.email}_${dateString}`);
+                if (draft) {
+                    setWeeklyMenu(prev => ({ ...prev, [dateString]: JSON.parse(draft) }));
+                }
+            }
+        };
+        fetchOrRestoreMenu();
+        // eslint-disable-next-line
+    }, [selectedDate, user]);
+
+    // Khi chỉnh sửa thực đơn, lưu bản nháp vào localStorage
+    useEffect(() => {
+        const dateString = getDateString(selectedDate);
+        if (weeklyMenu[dateString]) {
+            localStorage.setItem(`menuDraft_${user._id || user.id || user.email}_${dateString}`, JSON.stringify(weeklyMenu[dateString]));
+        }
+    }, [weeklyMenu, selectedDate, user]);
+
+    const handleFoodSelect = (food) => {
+        if (selectedMealForSearch) {
+            const { date, meal, foodIndex } = selectedMealForSearch;
+            const dateString = getDateString(date);
+
+            // Create a copy of the current menu
+            const updatedMenu = { ...weeklyMenu };
+
+            // If the date doesn't exist in the menu, create it
+            if (!updatedMenu[dateString]) {
+                updatedMenu[dateString] = {};
+            }
+
+            // If the meal doesn't exist in the date, create it with an empty array
+            if (!updatedMenu[dateString][meal]) {
+                updatedMenu[dateString][meal] = [];
+            }
+
+            // If we're replacing a specific food
+            if (foodIndex !== null) {
+                // Chỉ thay nếu phần tử đã tồn tại
+                if (updatedMenu[dateString][meal][foodIndex]) {
+                    updatedMenu[dateString][meal][foodIndex] = food;
+                }
+            } else {
+                // Add the new food to the meal
+                updatedMenu[dateString][meal].push(food);
+            }
+
+            // Update the menu
+            setWeeklyMenu(updatedMenu);
+
+            // Close the search modal
+            setShowFoodSearch(false);
+            setSelectedMealForSearch(null);
+        }
+    };
+
+    const handleAddFood = (date, meal) => {
+        setSelectedMealForSearch({ date, meal, foodIndex: null });
+        setShowFoodSearch(true);
+    };
+
     return (
         <div className="menu-section">
             <div className="menu-header">
                 <h2>Thực đơn của bạn</h2>
                 <div className="menu-actions">
-                    <label style={{ marginRight: 12 }}>
-                        Số bữa/ngày:
-                        <input
-                            type="number"
-                            min={2}
-                            max={6}
-                            value={mealsPerDay}
-                            onChange={e => setMealsPerDay(Math.max(2, Math.min(6, Number(e.target.value))))}
-                            style={{ width: 50, marginLeft: 8, marginRight: 16 }}
-                        />
-                    </label>
-                    <select
-                        value={menuType}
-                        onChange={(e) => setMenuType(e.target.value)}
-                        className="menu-type-select"
-                    >
-                        <option value="daily">Hàng ngày</option>
-                        <option value="weekly">Hàng tuần</option>
-                    </select>
-                    <button
-                        onClick={handleGenerateMenu}
-                        disabled={loading}
-                        className="generate-button"
-                    >
-                        {loading ? 'Đang tạo...' : 'Tạo thực đơn mới'}
-                    </button>
-                    <button
-                        onClick={handleSaveMenu}
-                        disabled={loading || Object.keys(weeklyMenu).length === 0}
-                        className="save-button"
-                    >
-                        Lưu thực đơn
-                    </button>
-                    <button
-                        onClick={handleShareMenu}
-                        disabled={Object.keys(weeklyMenu).length === 0}
-                        className="share-button"
-                    >
-                        Chia sẻ
-                    </button>
-                    <button
-                        onClick={handleExportMenu}
-                        disabled={Object.keys(weeklyMenu).length === 0}
-                        className="export-button"
-                    >
-                        Xuất thực đơn
-                    </button>
+                    <div className="meal-count-section">
+                        <label>
+                            Số bữa/ngày:
+                            <input
+                                type="number"
+                                min={2}
+                                max={6}
+                                value={mealsPerDay}
+                                onChange={e => setMealsPerDay(Math.max(2, Math.min(6, Number(e.target.value))))}
+                                className="menu-meal-input"
+                            />
+                        </label>
+
+                    </div>
+                    <div className="menu-buttons">
+                        <button
+                            onClick={handleGenerateMenu}
+                            disabled={loading}
+                            className="generate-button"
+                        >
+                            {loading ? 'Đang tạo...' : 'Tạo thực đơn mới'}
+                        </button>
+                        <button
+                            onClick={handleSaveMenu}
+                            disabled={loading || Object.keys(weeklyMenu).length === 0}
+                            className="save-button"
+                        >
+                            Lưu thực đơn
+                        </button>
+                        {/* <button
+                            onClick={handleExportMenu}
+                            disabled={Object.keys(weeklyMenu).length === 0}
+                            className="export-button"
+                        >
+                            Xuất thực đơn
+                        </button> */}
+                    </div>
                 </div>
             </div>
 
@@ -1364,99 +1558,32 @@ const MenuSection = ({ user }) => {
             {selectedFood && renderFoodDetailModal()}
             {renderFoodReplacementModal()}
             {renderErrorModal()}
+            <MealTimeSelector
+                mealCount={mealsPerDay}
+                mealTimes={mealTimes}
+                setMealTimes={setMealTimes}
+            />
+            {showFoodSearch && (
+                <div className="food-search-modal">
+                    <div className="food-search-modal-content">
+                        <div className="food-search-modal-header">
+                            <h2>Tìm kiếm món ăn</h2>
+                            <button
+                                className="close-modal"
+                                onClick={() => {
+                                    setShowFoodSearch(false);
+                                    setSelectedMealForSearch(null);
+                                }}
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <FoodSearch onFoodSelect={handleFoodSelect} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
-
-// Thêm CSS cho modal lỗi
-const styles = `
-.error-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.error-modal {
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    width: 90%;
-    max-width: 500px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.error-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.error-modal-header h3 {
-    margin: 0;
-    color: #333;
-}
-
-.error-modal-content {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.error-icon {
-    color: #ff4d4f;
-    font-size: 24px;
-}
-
-.error-modal-content p {
-    margin: 0;
-    color: #333;
-    font-size: 16px;
-}
-
-.error-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-}
-
-.error-modal-button {
-    padding: 8px 16px;
-    background-color: #1890ff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.error-modal-button:hover {
-    background-color: #40a9ff;
-}
-
-.close-modal {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #999;
-}
-
-.close-modal:hover {
-    color: #666;
-}
-`;
-
-// Thêm style vào document
-const styleSheet = document.createElement("style");
-styleSheet.innerText = styles;
-document.head.appendChild(styleSheet);
 
 export default MenuSection; 

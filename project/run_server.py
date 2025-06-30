@@ -1,6 +1,6 @@
 from fastapi import FastAPI # type: ignore
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
-from menu_ga import app as menu_app
+from menu_ga import app as menu_app, start_scheduler
 
 app = FastAPI()
 
@@ -20,6 +20,10 @@ app.mount("/api", menu_app)
 @app.get("/")
 async def root():
     return {"message": "Menu Generator API is running", "docs_url": "/api/docs"}
+
+@app.on_event("startup")
+async def startup_event():
+    await start_scheduler()
 
 if __name__ == "__main__":
     import uvicorn

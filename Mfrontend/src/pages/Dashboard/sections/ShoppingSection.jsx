@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './ShoppingSection.css';
+import { getShoppingList } from '../../../services/api';
 
 const ShoppingSection = ({ user }) => {
     const [items, setItems] = useState([
@@ -11,6 +12,11 @@ const ShoppingSection = ({ user }) => {
 
     const [newItem, setNewItem] = useState({ name: '', quantity: '', category: 'Khác' });
     const [showAddForm, setShowAddForm] = useState(false);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [shoppingIngredients, setShoppingIngredients] = useState([]);
+    const [loadingShopping, setLoadingShopping] = useState(false);
+    const [errorShopping, setErrorShopping] = useState("");
 
     const categories = ['Protein', 'Carbs', 'Fat', 'Rau củ', 'Trái cây', 'Gia vị', 'Khác'];
 
@@ -41,6 +47,20 @@ const ShoppingSection = ({ user }) => {
 
     const handleDeleteChecked = () => {
         setItems(prev => prev.filter(item => !item.checked));
+    };
+
+    const handleGenerateShoppingList = async () => {
+        setLoadingShopping(true);
+        setErrorShopping("");
+        try {
+            const userId = user._id || user.id || user.email;
+            const res = await getShoppingList(userId, startDate, endDate);
+            setShoppingIngredients(res.ingredients || []);
+        } catch (err) {
+            setErrorShopping(err.message || "Không thể lấy danh sách mua sắm");
+        } finally {
+            setLoadingShopping(false);
+        }
     };
 
     const renderAddForm = () => {
@@ -110,6 +130,52 @@ const ShoppingSection = ({ user }) => {
                     </button>
                 </div>
             </div>
+
+            <div className="shopping-list-generator" style={{ marginBottom: 24 }}>
+                <label style={{ marginRight: 8 }}>
+                    Từ ngày:
+                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ marginLeft: 4 }} />
+                </label>
+                <label style={{ marginRight: 8 }}>
+                    Đến ngày:
+                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ marginLeft: 4 }} />
+                </label>
+                <button
+                    className="btn-primary"
+                    onClick={handleGenerateShoppingList}
+                    disabled={loadingShopping || !startDate || !endDate}
+                    style={{ marginLeft: 8 }}
+                >
+                    {loadingShopping ? "Đang tổng hợp..." : "Tạo danh sách mua sắm từ thực đơn"}
+                </button>
+                {errorShopping && <div className="error-message">{errorShopping}</div>}
+            </div>
+
+            {shoppingIngredients.length > 0 && (
+                <div className="shopping-list-aggregated-card">
+                    <div className="shopping-list-aggregated-header">
+                        <i className="fas fa-shopping-basket"></i>
+                        <span>Danh sách mua sắm tổng hợp</span>
+                    </div>
+                    <div className="shopping-list-aggregated-body">
+                        <div className="shopping-list-ingredients-grid">
+                            {shoppingIngredients.map((ing, idx) => (
+                                <div className="ingredient-item" key={idx}>
+                                    <div className="ingredient-icon">
+                                        <i className="fas fa-carrot"></i>
+                                    </div>
+                                    <div className="ingredient-info">
+                                        <span className="ingredient-name">{ing.name}</span>
+                                        <span className="ingredient-quantity">
+                                            {ing.total_quantity} <span className="ingredient-unit">{ing.unit}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {renderAddForm()}
 

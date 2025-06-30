@@ -1,0 +1,360 @@
+/* Container */
+.foods-admin-container {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(30, 41, 59, 0.08);
+    padding: 32px 24px;
+    max-width: 100%;
+}
+
+.foods-admin-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0ea5e9;
+    margin-bottom: 20px;
+}
+
+.foods-admin-search {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+    width: 320px;
+    font-size: 1rem;
+    transition: border 0.2s;
+}
+
+.foods-admin-search:focus {
+    border: 1.5px solid #0ea5e9;
+    outline: none;
+}
+
+.foods-admin-table-wrapper {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    border-radius: 14px;
+    box-shadow: 0 1px 6px rgba(30, 41, 59, 0.04);
+}
+
+.foods-admin-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 1rem;
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(30, 41, 59, 0.04);
+}
+
+.foods-admin-table th,
+.foods-admin-table td {
+    padding: 14px 16px;
+    text-align: left;
+}
+
+.foods-admin-table th {
+    background: #f1f5f9;
+    color: #2563eb;
+    font-weight: 700;
+    font-size: 1.05rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.foods-admin-row {
+    transition: background 0.18s;
+}
+
+.foods-admin-row:hover {
+    background: #f0f9ff;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 12px;
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.badge-approved {
+    background: #e0fce7;
+    color: #22c55e;
+}
+
+.badge-pending {
+    background: #fff7e6;
+    color: #f59e42;
+}
+
+.badge-rejected {
+    background: #ffe4e6;
+    color: #ef4444;
+}
+
+.foods-admin-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+
+.action-btn.view {
+    color: #0ea5e9;
+}
+
+.action-btn.view:hover {
+    background: #e0f2fe;
+}
+
+.action-btn.edit {
+    color: #f59e42;
+}
+
+.action-btn.edit:hover {
+    background: #fff7e6;
+}
+
+.action-btn.approve {
+    color: #22c55e;
+}
+
+.action-btn.approve:hover {
+    background: #e0fce7;
+}
+
+.action-btn.delete {
+    color: #ef4444;
+}
+
+.action-btn.delete:hover {
+    background: #ffe4e6;
+}
+
+@media (max-width: 700px) {
+    .foods-admin-container {
+        padding: 16px 4px;
+    }
+
+    .foods-admin-search {
+        width: 100%;
+    }
+
+    .foods-admin-table th,
+    .foods-admin-table td {
+        padding: 10px 6px;
+    }
+
+    .foods-admin-title {
+        font-size: 1.3rem;
+    }
+}
+
+/* Modal overlay & content */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(30, 41, 59, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.food-detail-modal {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(30, 41, 59, 0.18);
+    padding: 36px 32px 28px 32px;
+    min-width: 320px;
+    max-width: 95vw;
+    min-height: 120px;
+    position: relative;
+    animation: modalIn 0.18s cubic-bezier(.4, 2, .6, 1) both;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes modalIn {
+    0% {
+        transform: scale(0.9) translateY(40px);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    width: 38px;
+    height: 38px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-modal-btn:hover {
+    background: #16a34a;
+}
+
+.modal-title {
+    text-align: center;
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #0ea5e9;
+    margin-bottom: 24px;
+    letter-spacing: 1px;
+}
+
+.modal-info-grid {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 65vh;
+    padding-right: 4px;
+}
+
+.modal-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.modal-label {
+    min-width: 90px;
+    font-weight: 700;
+    color: #334155;
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.modal-value,
+.modal-info-row input,
+.modal-info-row select,
+.modal-info-row textarea {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1rem;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1px solid #d1d5db;
+    background: #f8fafc;
+    margin: 0;
+}
+
+.modal-info-row input[type="number"] {
+    max-width: 120px;
+}
+
+.modal-info-row input[type="text"] {
+    max-width: 220px;
+}
+
+.modal-info-row select[multiple],
+.modal-info-row select[size] {
+    min-height: 38px;
+    max-width: 220px;
+}
+
+.modal-info-row textarea {
+    min-height: 38px;
+    resize: vertical;
+}
+
+.modal-loading {
+    text-align: center;
+    color: #0ea5e9;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.modal-error {
+    color: #ef4444;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.flex.justify-end.space-x-4.mt-4 {
+    flex-shrink: 0;
+    background: #fff;
+    padding-top: 12px;
+    margin-bottom: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+}
+
+@media (max-width: 600px) {
+    .food-detail-modal {
+        padding: 18px 6px 18px 6px;
+        min-width: 0;
+    }
+
+    .modal-title {
+        font-size: 1.1rem;
+    }
+
+    .modal-info-row {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .modal-label {
+        margin-bottom: 2px;
+    }
+}
+
+.ingredient-input-name {
+    min-width: 110px;
+    max-width: 220px;
+    flex: 2;
+}
+
+.ingredient-input-quantity {
+    min-width: 60px;
+    max-width: 100px;
+    flex: 1;
+}
+
+.ingredient-input-unit {
+    min-width: 70px;
+    max-width: 120px;
+    flex: 1;
+}

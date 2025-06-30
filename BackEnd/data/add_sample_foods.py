@@ -3555,7 +3555,732 @@ healthy_foods = [
         "context": {"mealTime": ["snack"], "season": "all", "weather": ["all"]},
         "ingredients": [{"name": "Hạt hướng dương", "quantity": 100, "unit": "g"}],
         "instructions": ["Ăn trực tiếp hoặc làm topping cho salad."]
-    }
+    },
+    {
+        "name": "Trứng luộc",
+        "image": "/images/foods/boiled-egg.jpg",
+        "calories": 78,
+        "protein": 6,
+        "carbs": 1,
+        "fat": 5,
+        "preferences": ["healthy", "high_protein", "quick"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+        "mealTime": ["breakfast", "sanck"],
+        "season": "all",
+        "weather": ["all"]
+        },
+        "ingredients": [
+        {"name": "Trứng gà", "quantity": 50, "unit": "g"},
+        {"name": "Muối", "quantity": 1, "unit": "g"}
+        ],
+        "instructions": [
+        "Cho trứng vào nồi, thêm nước và một chút muối.",
+        "Luộc trong 8-10 phút đến khi trứng chín.",
+        "Bóc vỏ và dùng nóng."
+        ]
+        },
+        {
+        "name": "Ức gà nướng",
+        "image": "/images/foods/grilled-chicken-breast.jpg",
+        "calories": 165,
+        "protein": 31,
+        "carbs": 0,
+        "fat": 3.6,
+        "preferences": ["healthy", "high_protein", "low_fat"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["lunch"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Ức gà", "quantity": 100, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"},
+            {"name": "Tiêu", "quantity": 0.5, "unit": "g"}
+        ],
+        "instructions": [
+            "Rửa sạch ức gà, ướp với muối và tiêu trong 15 phút.",
+            "Nướng trên chảo hoặc lò nướng ở 200°C trong 20 phút, trở đều.",
+            "Cắt lát và dùng nóng."
+        ]
+        },
+        {
+        "name": "Đậu hũ chiên giòn",
+        "image": "/images/foods/fried-tofu.jpg",
+        "calories": 120,
+        "protein": 10,
+        "carbs": 2,
+        "fat": 8,
+        "preferences": ["vegan", "high_protein"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Đậu hũ", "quantity": 100, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 5, "unit": "ml"}
+        ],
+        "instructions": [
+            "Cắt đậu hũ thành miếng vừa ăn, để ráo nước.",
+            "Đun nóng dầu, chiên đậu hũ ở lửa vừa đến khi vàng giòn.",
+            "Vớt ra, để ráo dầu và dùng nóng."
+        ]
+        },
+        {
+        "name": "Tôm hấp bia",
+        "image": "/images/foods/steamed-shrimp-beer.jpg",
+        "calories": 90,
+        "protein": 20,
+        "carbs": 1,
+        "fat": 1,
+        "preferences": ["healthy", "high_protein", "low_fat"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Tôm tươi", "quantity": 100, "unit": "g"},
+            {"name": "Bia", "quantity": 50, "unit": "ml"},
+            {"name": "Sả", "quantity": 10, "unit": "g"}
+        ],
+        "instructions": [
+            "Rửa sạch tôm, để ráo. Đập dập sả và lót dưới nồi.",
+            "Đặt tôm lên trên sả, đổ bia vào nồi.",
+            "Hấp trong 10 phút đến khi tôm chín đỏ, dùng nóng."
+        ]
+        },
+        {
+        "name": "Thịt heo luộc",
+        "image": "/images/foods/boiled-pork.jpg",
+        "calories": 200,
+        "protein": 25,
+        "carbs": 0,
+        "fat": 10,
+        "preferences": ["high_protein", "quick"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["lunch"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Thịt heo", "quantity": 100, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"}
+        ],
+        "instructions": [
+            "Rửa sạch thịt heo, cho vào nồi nước lạnh với chút muối.",
+            "Luộc ở lửa vừa trong 20 phút đến khi thịt chín.",
+            "Vớt ra, thái lát mỏng, dùng với nước mắm."
+        ]
+        },
+        {
+        "name": "Cá thu chiên",
+        "image": "/images/foods/fried-mackerel.jpg",
+        "calories": 190,
+        "protein": 22,
+        "carbs": 0,
+        "fat": 12,
+        "preferences": ["high_protein"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Cá thu", "quantity": 100, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 5, "unit": "ml"}
+        ],
+        "instructions": [
+            "Rửa sạch cá thu, ướp với muối trong 10 phút.",
+            "Đun nóng dầu, chiên cá ở lửa vừa đến khi vàng hai mặt.",
+            "Vớt ra, để ráo dầu, dùng nóng."
+        ]
+        },
+        {
+        "name": "Đậu hũ hấp trứng",
+        "image": "/images/foods/steamed-tofu-egg.jpg",
+        "calories": 110,
+        "protein": 12,
+        "carbs": 2,
+        "fat": 6,
+        "preferences": ["vegan", "high_protein", "healthy"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["snack"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Đậu hũ", "quantity": 80, "unit": "g"},
+            {"name": "Trứng gà", "quantity": 50, "unit": "g"}
+        ],
+        "instructions": [
+            "Cắt đậu hũ thành miếng, đặt vào bát.",
+            "Đập trứng vào bát, trộn đều với đậu hũ.",
+            "Hấp trong 15 phút đến khi trứng chín, dùng nóng."
+        ]
+        },
+        {
+        "name": "Trứng chiên cà chua",
+        "image": "/images/foods/egg-tomato-omelette.jpg",
+        "calories": 90,
+        "protein": 6,
+        "carbs": 5,
+        "fat": 5,
+        "preferences": ["healthy", "high_protein", "quick"],
+        "restrictions": ["gluten_free"],
+        "context": {
+            "mealTime": ["breakfast"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Trứng gà", "quantity": 50, "unit": "g"},
+            {"name": "Cà chua", "quantity": 50, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 3, "unit": "ml"}
+        ],
+        "instructions": [
+            "Đập trứng vào bát, đánh tan. Cà chua cắt nhỏ.",
+            "Đun nóng dầu, cho cà chua vào xào sơ, sau đó đổ trứng vào.",
+            "Chiên ở lửa vừa đến khi trứng chín, dùng nóng."
+        ]
+        },
+        {
+        "name": "Trứng chiên cà chua",
+        "image": "/images/foods/egg-tomato-omelette.jpg",
+        "calories": 90,
+        "protein": 6,
+        "carbs": 5,
+        "fat": 5,
+        "preferences": ["healthy", "high_protein", "quick"],
+        "restrictions": ["gluten_free"],
+        "context": {
+            "mealTime": ["breakfast"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Trứng gà", "quantity": 50, "unit": "g"},
+            {"name": "Cà chua", "quantity": 50, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 3, "unit": "ml"}
+        ],
+        "instructions": [
+            "Đập trứng vào bát, đánh tan. Cà chua cắt nhỏ.",
+            "Đun nóng dầu, cho cà chua vào xào sơ, sau đó đổ trứng vào.",
+            "Chiên ở lửa vừa đến khi trứng chín, dùng nóng."
+        ]
+        },
+        {
+        "name": "Thịt bò nướng lá lốt",
+        "image": "/images/foods/grilled-beef-lot-leaf.jpg",
+        "calories": 180,
+        "protein": 24,
+        "carbs": 1,
+        "fat": 9,
+        "preferences": ["high_protein"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Thịt bò", "quantity": 100, "unit": "g"},
+            {"name": "Lá lốt", "quantity": 20, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"}
+        ],
+        "instructions": [
+            "Băm nhỏ thịt bò, ướp với muối trong 15 phút.",
+            "Cuốn thịt bò vào lá lốt, xiên que.",
+            "Nướng trên than hoặc lò nướng ở 200°C trong 10 phút, dùng nóng."
+        ]
+        },
+        {
+        "name": "Cơm gạo lứt",
+        "image": "/images/foods/boiled-brown-rice.jpg",
+        "calories": 130,
+        "protein": 2.5,
+        "carbs": 25,
+        "fat": 1,
+        "preferences": ["healthy", "high_carb", "low_fat"],
+        "restrictions": ["gluten_free", "vegan"],
+        "context": {
+            "mealTime": ["breakfast"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Gạo lứt", "quantity": 100, "unit": "g"},
+            {"name": "Nước", "quantity": 200, "unit": "ml"}
+        ],
+        "instructions": [
+            "Rửa gạo lứt sạch, ngâm 30 phút.",
+            "Cho gạo và nước vào nồi, luộc ở lửa vừa trong 40 phút đến khi chín mềm.",
+            "Để ráo nước, dùng nóng."
+        ]
+        },
+        {
+        "name": "Bánh mì ",
+        "image": "/images/foods/whole-wheat-toast.jpg",
+        "calories": 250,
+        "protein": 9,
+        "carbs": 48,
+        "fat": 3,
+        "preferences": ["high_carb", "quick"],
+        "restrictions": ["vegetarian"],
+        "context": {
+            "mealTime": ["lunch"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Bánh mì nguyên cám", "quantity": 100, "unit": "g"},
+            {"name": "Dầu ô liu", "quantity": 2, "unit": "ml"}
+        ],
+        "instructions": [
+            "Cắt bánh mì thành lát, phết nhẹ dầu ô liu.",
+            "Nướng ở 180°C trong 10 phút đến khi vàng giòn.",
+            "Dùng nóng với rau hoặc phô mai."
+        ]
+        },
+        {
+        "name": "Khoai lang chiên",
+        "image": "/images/foods/fried-sweet-potato.jpg",
+        "calories": 150,
+        "protein": 2,
+        "carbs": 35,
+        "fat": 4,
+        "preferences": ["high_carb", "healthy"],
+        "restrictions": ["gluten_free", "vegan"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Khoai lang", "quantity": 100, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 5, "unit": "ml"}
+        ],
+        "instructions": [
+            "Gọt vỏ khoai lang, cắt thành que, rửa sạch.",
+            "Đun nóng dầu, chiên khoai ở lửa vừa đến khi vàng giòn.",
+            "Vớt ra, để ráo dầu, dùng nóng."
+        ]
+        },
+        {
+        "name": "Bánh khoai tây hấp",
+        "image": "/images/foods/steamed-potato-cake.jpg",
+        "calories": 120,
+        "protein": 3,
+        "carbs": 28,
+        "fat": 1,
+        "preferences": ["high_carb", "healthy"],
+        "restrictions": ["gluten_free", "vegan"],
+        "context": {
+            "mealTime": ["snack"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Khoai tây", "quantity": 100, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"}
+        ],
+        "instructions": [
+            "Gọt vỏ khoai tây, nghiền nhuyễn, nêm muối.",
+            "Định hình thành bánh, đặt vào xửng.",
+            "Hấp trong 15 phút đến khi chín mềm, dùng nóng."
+        ]
+        },
+        {
+        "name": "Cơm trắng",
+        "image": "/images/foods/boiled-white-rice.jpg",
+        "calories": 130,
+        "protein": 2.5,
+        "carbs": 28,
+        "fat": 0.3,
+        "preferences": ["high_carb", "quick"],
+        "restrictions": ["gluten_free", "vegan"],
+        "context": {
+            "mealTime": ["lunch"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Gạo trắng", "quantity": 100, "unit": "g"},
+            {"name": "Nước", "quantity": 200, "unit": "ml"}
+        ],
+        "instructions": [
+            "Rửa gạo trắng sạch, ngâm 20 phút.",
+            "Cho gạo và nước vào nồi, luộc ở lửa vừa trong 20 phút.",
+            "Để ráo nước, dùng nóng."
+        ]
+        },
+        {
+        "name": "Bánh ngô chiên",
+        "image": "/images/foods/fried-corn-cake.jpg",
+        "calories": 180,
+        "protein": 4,
+        "carbs": 32,
+        "fat": 6,
+        "preferences": ["high_carb", "vegetarian"],
+        "restrictions": ["gluten_free"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Ngô ngọt", "quantity": 100, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 5, "unit": "ml"}
+        ],
+        "instructions": [
+            "Xay nhuyễn ngô, định hình thành bánh.",
+            "Đun nóng dầu, chiên bánh ngô ở lửa vừa đến khi vàng.",
+            "Vớt ra, để ráo dầu, dùng nóng."
+        ]
+        },
+        {
+        "name": "Yến mạch",
+        "image": "/images/foods/cooked-oatmeal.jpg",
+        "calories": 120,
+        "protein": 5,
+        "carbs": 27,
+        "fat": 2,
+        "preferences": ["high_carb", "healthy"],
+        "restrictions": ["gluten_free", "vegan"],
+        "context": {
+            "mealTime": ["breakfast"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Yến mạch", "quantity": 100, "unit": "g"},
+            {"name": "Nước", "quantity": 200, "unit": "ml"}
+        ],
+        "instructions": [
+            "Cho yến mạch và nước vào nồi.",
+            "Nấu ở lửa vừa trong 10 phút, khuấy đều đến khi sệt.",
+            "Dùng nóng với trái cây tùy chọn."
+        ]
+        },
+        {
+        "name": "Bánh mì khoai lang nướng",
+        "image": "/images/foods/sweet-potato-bread-toast.jpg",
+        "calories": 220,
+        "protein": 4,
+        "carbs": 45,
+        "fat": 3,
+        "preferences": ["high_carb", "healthy"],
+        "restrictions": ["vegetarian"],
+        "context": {
+            "mealTime": ["snack"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Bánh mì", "quantity": 80, "unit": "g"},
+            {"name": "Khoai lang nghiền", "quantity": 20, "unit": "g"}
+        ],
+        "instructions": [
+            "Phết khoai lang nghiền lên bánh mì.",
+            "Nướng ở 180°C trong 8 phút đến khi vàng.",
+            "Dùng nóng hoặc nguội."
+        ]
+        },
+        {
+        "name": "Mì sợi",
+        "image": "/images/foods/boiled-noodles.jpg",
+        "calories": 140,
+        "protein": 5,
+        "carbs": 30,
+        "fat": 1,
+        "preferences": ["high_carb", "quick"],
+        "restrictions": ["vegetarian"],
+        "context": {
+            "mealTime": ["lunch"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Mì sợi", "quantity": 100, "unit": "g"},
+            {"name": "Nước", "quantity": 300, "unit": "ml"}
+        ],
+        "instructions": [
+            "Đun sôi nước, cho mì sợi vào luộc 5 phút.",
+            "Vớt mì ra, để ráo nước.",
+            "Dùng với nước sốt hoặc rau tùy chọn."
+        ]
+        },
+        {
+        "name": "Bánh gạo nướng",
+        "image": "/images/foods/grilled-rice-cake.jpg",
+        "calories": 160,
+        "protein": 3,
+        "carbs": 35,
+        "fat": 1,
+        "preferences": ["high_carb", "healthy"],
+        "restrictions": ["gluten_free", "vegan"],
+        "context": {
+            "mealTime": ["snack"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Bánh gạo", "quantity": 100, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"}
+        ],
+        "instructions": [
+            "Phết nhẹ muối lên bánh gạo.",
+            "Nướng ở 150°C trong 5 phút đến khi giòn.",
+            "Dùng nóng hoặc nguội."
+        ]
+        },
+        {
+        "name": "Bơ nghiền",
+        "image": "/images/foods/mashed-avocado.jpg",
+        "calories": 160,
+        "protein": 2,
+        "carbs": 9,
+        "fat": 15,
+        "preferences": ["healthy", "high_fat", "vegan"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["breakfast"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Quả bơ", "quantity": 100, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"}
+        ],
+        "instructions": [
+            "Cắt đôi quả bơ, lấy phần thịt, nghiền nhuyễn.",
+            "Nêm chút muối cho vừa miệng.",
+            "Dùng ngay với bánh mì hoặc ăn trực tiếp."
+        ]
+        },
+        {
+        "name": "Thịt ba chỉ nướng",
+        "image": "/images/foods/grilled-pork-belly.jpg",
+        "calories": 300,
+        "protein": 12,
+        "carbs": 0,
+        "fat": 28,
+        "preferences": ["high_fat", "savory"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["lunch"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Thịt ba chỉ", "quantity": 100, "unit": "g"},
+            {"name": "Muối", "quantity": 1, "unit": "g"},
+            {"name": "Tiêu", "quantity": 0.5, "unit": "g"}
+        ],
+        "instructions": [
+            "Rửa sạch thịt ba chỉ, ướp với muối và tiêu trong 15 phút.",
+            "Nướng trên chảo hoặc lò ở 200°C trong 20 phút, trở đều.",
+            "Cắt lát, dùng nóng với rau sống."
+        ]
+        },
+        {
+        "name": "Cá hồi chiên",
+        "image": "/images/foods/fried-salmon.jpg",
+        "calories": 250,
+        "protein": 20,
+        "carbs": 0,
+        "fat": 18,
+        "preferences": ["high_fat", "healthy"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Cá hồi fillet", "quantity": 100, "unit": "g"},
+            {"name": "Dầu ô liu", "quantity": 5, "unit": "ml"}
+        ],
+        "instructions": [
+            "Rửa sạch cá hồi, ướp với muối trong 10 phút.",
+            "Đun nóng dầu ô liu, chiên cá ở lửa vừa đến khi vàng hai mặt.",
+            "Dùng nóng với chanh hoặc rau."
+        ]
+        },
+        {
+        "name": "Hạt óc chó rang",
+        "image": "/images/foods/roasted-walnuts.jpg",
+        "calories": 185,
+        "protein": 4,
+        "carbs": 4,
+        "fat": 18,
+        "preferences": ["high_fat", "healthy", "vegan"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["snack"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Hạt óc chó", "quantity": 100, "unit": "g"}
+        ],
+        "instructions": [
+            "Rửa sạch hạt óc chó, để ráo nước.",
+            "Rang trên chảo không dầu ở lửa vừa trong 5-7 phút đến khi thơm.",
+            "Để nguội, dùng làm món ăn vặt."
+        ]
+        },
+        {
+        "name": "Dừa nạo",
+        "image": "/images/foods/shredded-coconut.jpg",
+        "calories": 354,
+        "protein": 3,
+        "carbs": 15,
+        "fat": 33,
+        "preferences": ["high_fat", "vegan"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["lunch"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Dừa tươi", "quantity": 100, "unit": "g"}
+        ],
+        "instructions": [
+            "Tách vỏ dừa, nạo phần cùi trắng.",
+            "Rửa sạch, để ráo nước.",
+            "Dùng trực tiếp hoặc trộn với đường tùy thích."
+        ]
+        },
+        {
+        "name": "Trứng ốp la",
+        "image": "/images/foods/fried-egg.jpg",
+        "calories": 120,
+        "protein": 6,
+        "carbs": 1,
+        "fat": 10,
+        "preferences": ["high_fat", "quick"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["breakfast"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Trứng gà", "quantity": 50, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 5, "unit": "ml"}
+        ],
+        "instructions": [
+            "Đun nóng dầu trong chảo.",
+            "Đập trứng vào, rán ở lửa vừa đến khi lòng đỏ chín vừa.",
+            "Dùng nóng với bánh mì hoặc rau."
+        ]
+        },
+        {
+        "name": "Phô mai tan chảy",
+        "image": "/images/foods/melted-cheese.jpg",
+        "calories": 300,
+        "protein": 7,
+        "carbs": 1,
+        "fat": 25,
+        "preferences": ["high_fat", "savory"],
+        "restrictions": ["gluten_free"],
+        "context": {
+            "mealTime": ["snack"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Phô mai cheddar", "quantity": 100, "unit": "g"}
+        ],
+        "instructions": [
+            "Cắt phô mai thành miếng nhỏ.",
+            "Đun chảy phô mai trên chảo hoặc lò vi sóng ở nhiệt độ thấp.",
+            "Dùng nóng với bánh mì hoặc rau củ."
+        ]
+        },
+        {
+        "name": "Thịt xá xíu",
+        "image": "/images/foods/char-siu-pork.jpg",
+        "calories": 280,
+        "protein": 18,
+        "carbs": 5,
+        "fat": 20,
+        "preferences": ["high_fat", "savory"],
+        "restrictions": ["gluten_free"],
+        "context": {
+            "mealTime": ["dinner"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Thịt heo vai", "quantity": 100, "unit": "g"},
+            {"name": "Mật ong", "quantity": 10, "unit": "g"},
+            {"name": "Dầu ăn", "quantity": 5, "unit": "ml"}
+        ],
+        "instructions": [
+            "Ướp thịt với mật ong và dầu trong 1 giờ.",
+            "Nướng ở 200°C trong 25 phút, quét thêm nước ướp giữa chừng.",
+            "Cắt lát, dùng nóng với cơm hoặc rau."
+        ]
+        },
+        {
+        "name": "Hạt điều rang",
+        "image": "/images/foods/roasted-cashews.jpg",
+        "calories": 180,
+        "protein": 5,
+        "carbs": 9,
+        "fat": 15,
+        "preferences": ["high_fat", "healthy", "vegan"],
+        "restrictions": ["gluten_free", "low_carb"],
+        "context": {
+            "mealTime": ["snack"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Hạt điều", "quantity": 100, "unit": "g"}
+        ],
+        "instructions": [
+            "Rửa sạch hạt điều, để ráo nước.",
+            "Rang trên chảo không dầu ở lửa vừa trong 5-7 phút đến khi thơm.",
+            "Để nguội, dùng làm món ăn vặt."
+        ]
+        },
+        {
+        "name": "Sữa chua béo",
+        "image": "/images/foods/full-fat-yogurt.jpg",
+        "calories": 150,
+        "protein": 5,
+        "carbs": 7,
+        "fat": 12,
+        "preferences": ["high_fat", "healthy"],
+        "restrictions": ["gluten_free"],
+        "context": {
+            "mealTime": ["breakfast"],
+            "season": "all",
+            "weather": ["all"]
+        },
+        "ingredients": [
+            {"name": "Sữa chua béo", "quantity": 100, "unit": "g"}
+        ],
+        "instructions": [
+            "Lấy sữa chua béo ra khỏi tủ lạnh.",
+            "Trộn đều với mật ong hoặc trái cây tùy chọn.",
+            "Dùng lạnh để tăng hương vị."
+        ]
+        }
+
+
     
     
 ]

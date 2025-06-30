@@ -1,8 +1,12 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useMemo, useCallback, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logout, getUser, updateProfile } from '../../services/api';
+import { logout, getUser, updateProfile, getMenuByDate, getNotifications } from '../../services/api';
+import NotificationDropdown from '../../components/NotificationDropdown';
+import '../../components/NotificationDropdown.css';
+
 import './Dashboard.css';
 import SavedMenusPage from './sections/SavedMenusPage';
+import ProfileSection from './sections/ProfileSection';
 
 // Lazy load all sections
 const OverviewSection = lazy(() => import('./sections/OverviewSection'));
@@ -11,7 +15,7 @@ const MenuSection = lazy(() => import('./sections/MenuSection'));
 const ProgressSection = lazy(() => import('./sections/ProgressSection'));
 const AISection = lazy(() => import('./sections/AISection'));
 const ShoppingSection = lazy(() => import('./sections/ShoppingSection'));
-const CommunitySection = lazy(() => import('./sections/CommunitySection'));
+// const CommunitySection = lazy(() => import('./sections/CommunitySection'));
 
 // Loading component for sections
 const SectionLoading = () => (
@@ -26,7 +30,7 @@ const Dashboard = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [activeSection, setActiveSection] = useState('nutrition'); // Default active section
+    const [activeSection, setActiveSection] = useState('overview'); // Default active section
     const [points, setPoints] = useState(0);
     const [notifications, setNotifications] = useState([]);
     const [aiMessage, setAiMessage] = useState('');
@@ -50,6 +54,61 @@ const Dashboard = () => {
         },
         compliance: 100
     });
+    const [isPending, startTransition] = useTransition();
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [menuByDate, setMenuByDate] = useState({});
+    const [selectedDate, setSelectedDate] = useState(new Date());
+
+    const handleSetSelectedDate = (date) => {
+        console.log('Dashboard setSelectedDate:', date, typeof date, date instanceof Date ? date.toISOString() : 'Không phải Date');
+        setSelectedDate(date);
+    };
+
+    // Memoize user data fetching
+    const fetchUserData = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const userData = await getUser();
+            setUser(userData);
+            setProfileForm({
+                age: userData.nutritionProfile?.age || '',
+                weight: userData.nutritionProfile?.weight || '',
+                height: userData.nutritionProfile?.height || '',
+                gender: userData.nutritionProfile?.gender || '',
+                activityLevel: userData.nutritionProfile?.activityLevel || '',
+                goals: userData.nutritionProfile?.goals || '',
+                medicalConditions: userData.nutritionProfile?.medicalConditions || [],
+                preferences: userData.nutritionProfile?.preferences || [],
+                restrictions: userData.nutritionProfile?.restrictions || [],
+                dailyCalorieNeeds: userData.nutritionProfile?.dailyCalorieNeeds || 2000,
+                macroRatio: userData.nutritionProfile?.macroRatio || {
+                    protein: 30,
+                    carbs: 40,
+                    fat: 30
+                },
+                compliance: userData.nutritionProfile?.compliance || 100
+            });
+        } catch (err) {
+            console.error('Error fetching user data:', err);
+            if (err.response?.status === 401) {
+                localStorage.removeItem('token');
+                navigate('/auth');
+            } else if (err.code === 'ERR_NETWORK') {
+                setError('Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.');
+            } else {
+                setError(err.response?.data?.message || 'Có lỗi xảy ra khi tải dữ liệu người dùng. Vui lòng thử lại sau.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [navigate]);
+
+    const fetchMenuByDate = useCallback(async (date) => {
+        if (!user) return;
+        const res = await getMenuByDate(user._id || user.id || user.email, date);
+        setMenuByDate(prev => ({ ...prev, [date]: res?.menu || null }));
+    }, [user]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -57,54 +116,41 @@ const Dashboard = () => {
             navigate('/auth');
             return;
         }
+        fetchUserData();
+    }, [fetchUserData, navigate]);
 
-        const fetchUserData = async () => {
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            const userId = user?._id || user?.id || "684420787ed1e6d050098cc4";
+            if (!userId) return;
             try {
-                setLoading(true);
-                setError(null);
-                const userData = await getUser();
-                setUser(userData);
-                setProfileForm({
-                    age: userData.nutritionProfile?.age || '',
-                    weight: userData.nutritionProfile?.weight || '',
-                    height: userData.nutritionProfile?.height || '',
-                    gender: userData.nutritionProfile?.gender || '',
-                    activityLevel: userData.nutritionProfile?.activityLevel || '',
-                    goals: userData.nutritionProfile?.goals || '',
-                    medicalConditions: userData.nutritionProfile?.medicalConditions || [],
-                    preferences: userData.nutritionProfile?.preferences || [],
-                    restrictions: userData.nutritionProfile?.restrictions || [],
-                    dailyCalorieNeeds: userData.nutritionProfile?.dailyCalorieNeeds || 2000,
-                    macroRatio: userData.nutritionProfile?.macroRatio || {
-                        protein: 30,
-                        carbs: 40,
-                        fat: 30
-                    },
-                    compliance: userData.nutritionProfile?.compliance || 100
-                });
+                const data = await getNotifications(userId);
+                console.log("Fetched notifications:", data);
+                setNotifications(data);
             } catch (err) {
-                console.error('Error fetching user data:', err);
-                if (err.response?.status === 401) {
-                    localStorage.removeItem('token');
-                    navigate('/auth');
-                } else if (err.code === 'ERR_NETWORK') {
-                    setError('Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.');
-                } else {
-                    setError(err.response?.data?.message || 'Có lỗi xảy ra khi tải dữ liệu người dùng. Vui lòng thử lại sau.');
-                }
-            } finally {
-                setLoading(false);
+                console.error("Error fetching notifications:", err);
             }
         };
+        fetchNotifications();
+    }, [user]);
 
-        fetchUserData();
+    useEffect(() => {
+        console.log('Dashboard selectedDate changed:', selectedDate, typeof selectedDate, selectedDate instanceof Date ? selectedDate.toISOString() : 'Không phải Date');
+    }, [selectedDate]);
+
+    // Memoize handlers
+    const handleLogout = useCallback(() => {
+        logout();
+        navigate('/');
     }, [navigate]);
 
-    const handleProfileSubmit = async (e) => {
+    const handleProfileSubmit = useCallback(async (e) => {
+        console.log('==> handleProfileSubmit CALLED');
         e.preventDefault();
         try {
-            // Validate form data
+            console.log('profileForm:', profileForm);
             if (!profileForm.age || !profileForm.weight || !profileForm.height || !profileForm.gender || !profileForm.activityLevel || !profileForm.goals) {
+                console.log('==> Thiếu trường bắt buộc!');
                 setNotifications(prev => [...prev, {
                     id: Date.now(),
                     message: 'Vui lòng điền đầy đủ thông tin bắt buộc',
@@ -224,12 +270,7 @@ const Dashboard = () => {
                 time: new Date().toLocaleTimeString()
             }]);
         }
-    };
-
-    const handleLogout = () => {
-        logout();
-        navigate('/');
-    };
+    }, [profileForm]);
 
     const handleAiChat = (e) => {
         e.preventDefault();
@@ -257,6 +298,95 @@ const Dashboard = () => {
         }, 1000);
     };
 
+    const handleSectionChange = useCallback((section) => {
+        startTransition(() => {
+            setActiveSection(section);
+        });
+    }, []);
+
+    // Memoize section rendering
+    const renderSection = useCallback(() => {
+        switch (activeSection) {
+            case 'overview':
+                return (
+                    <Suspense fallback={<SectionLoading />}>
+                        <OverviewSection user={user} />
+                    </Suspense>
+                );
+            case 'nutrition':
+                return (
+                    <Suspense fallback={<SectionLoading />}>
+                        <NutritionSection user={user} />
+                    </Suspense>
+                );
+            case 'menu':
+                return (
+                    <Suspense fallback={<SectionLoading />}>
+                        <MenuSection
+                            user={user}
+                            menuByDate={menuByDate}
+                            setMenuByDate={setMenuByDate}
+                            fetchMenuByDate={fetchMenuByDate}
+                            selectedDate={selectedDate}
+                            setSelectedDate={setSelectedDate}
+                        />
+                    </Suspense>
+                );
+            case 'progress':
+                return (
+                    <Suspense fallback={<SectionLoading />}>
+                        <ProgressSection
+                            user={user}
+                            menuByDate={menuByDate}
+                            selectedDate={selectedDate}
+                            setSelectedDate={handleSetSelectedDate}
+                            fetchMenuByDate={fetchMenuByDate}
+                        />
+                    </Suspense>
+                );
+            case 'ai':
+                return (
+                    <Suspense fallback={<SectionLoading />}>
+                        <AISection
+                            aiMessage={aiMessage}
+                            setAiMessage={setAiMessage}
+                            chatHistory={chatHistory}
+                            setChatHistory={setChatHistory}
+                            handleAiChat={handleAiChat}
+                        />
+                    </Suspense>
+                );
+            case 'shopping':
+                return (
+                    <Suspense fallback={<SectionLoading />}>
+                        <ShoppingSection user={user} />
+                    </Suspense>
+                );
+            case 'profile':
+                return (
+                    <ProfileSection
+                        user={user}
+                        isEditingProfile={isEditingProfile}
+                        setIsEditingProfile={setIsEditingProfile}
+                        handleProfileSubmit={handleProfileSubmit}
+                        profileForm={profileForm}
+                        setProfileForm={setProfileForm}
+                    />
+                );
+            case 'savedMenus':
+                return (
+                    <Suspense fallback={<SectionLoading />}>
+                        <SavedMenusPage user={user} />
+                    </Suspense>
+                );
+            default:
+                return null;
+        }
+    }, [activeSection, isEditingProfile, user, handleProfileSubmit, menuByDate, setMenuByDate, fetchMenuByDate, selectedDate, handleSetSelectedDate]);
+
+    // Memoize the rendered section
+    const renderedSection = useMemo(() => renderSection(), [renderSection]);
+
     if (loading) {
         return (
             <div className="dashboard-loading">
@@ -278,354 +408,26 @@ const Dashboard = () => {
         );
     }
 
-    const renderSection = () => {
-        switch (activeSection) {
-            case 'overview':
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <OverviewSection user={user} />
-                    </Suspense>
-                );
-            case 'nutrition':
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <NutritionSection user={user} />
-                    </Suspense>
-                );
-            case 'menu':
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <MenuSection user={user} />
-                    </Suspense>
-                );
-            case 'progress':
-                console.log('ProgressSection rendered with user:', user);
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <ProgressSection user={user} />
-                    </Suspense>
-                );
-            case 'ai':
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <AISection
-                            aiMessage={aiMessage}
-                            setAiMessage={setAiMessage}
-                            chatHistory={chatHistory}
-                            setChatHistory={setChatHistory}
-                            handleAiChat={handleAiChat}
-                        />
-                    </Suspense>
-                );
-            case 'shopping':
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <ShoppingSection user={user} />
-                    </Suspense>
-                );
-            case 'community':
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <CommunitySection user={user} />
-                    </Suspense>
-                );
-            case 'profile':
-                return (
-                    <div className="profile-section">
-                        <div className="section-header">
-                            <h2>Hồ sơ cá nhân</h2>
-                            <button
-                                className="btn-secondary"
-                                onClick={() => setIsEditingProfile(!isEditingProfile)}
-                            >
-                                {isEditingProfile ? 'Hủy' : 'Chỉnh sửa'}
-                            </button>
-                        </div>
-
-                        {isEditingProfile ? (
-                            <form onSubmit={handleProfileSubmit} className="profile-form">
-                                <div className="form-grid">
-                                    <div className="form-group">
-                                        <label>Tuổi</label>
-                                        <input
-                                            type="number"
-                                            value={profileForm.age}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                age: e.target.value
-                                            }))}
-                                            min="1"
-                                            max="120"
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Cân nặng (kg)</label>
-                                        <input
-                                            type="number"
-                                            value={profileForm.weight}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                weight: e.target.value
-                                            }))}
-                                            min="20"
-                                            max="300"
-                                            step="0.1"
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Chiều cao (cm)</label>
-                                        <input
-                                            type="number"
-                                            value={profileForm.height}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                height: e.target.value
-                                            }))}
-                                            min="100"
-                                            max="250"
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Giới tính</label>
-                                        <select
-                                            value={profileForm.gender}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                gender: e.target.value
-                                            }))}
-                                        >
-                                            <option value="">Chọn giới tính</option>
-                                            <option value="male">Nam</option>
-                                            <option value="female">Nữ</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Mức độ hoạt động</label>
-                                        <select
-                                            value={profileForm.activityLevel}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                activityLevel: e.target.value
-                                            }))}
-                                        >
-                                            <option value="">Chọn mức độ</option>
-                                            <option value="sedentary">Ít vận động</option>
-                                            <option value="active">Vận động vừa phải</option>
-                                            <option value="veryActive">Vận động nhiều</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Mục tiêu</label>
-                                        <select
-                                            value={profileForm.goals}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                goals: e.target.value
-                                            }))}
-                                        >
-                                            <option value="">Chọn mục tiêu</option>
-                                            <option value="weight_loss">Giảm cân</option>
-                                            <option value="muscle_gain">Tăng cơ</option>
-                                            <option value="maintenance">Duy trì</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="form-section">
-                                    <h3>Tình trạng sức khỏe</h3>
-                                    <div className="checkbox-group">
-                                        {['diabetes', 'heart_disease', 'allergy', 'none'].map(condition => (
-                                            <label key={condition} className="checkbox-label">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={profileForm.medicalConditions.includes(condition)}
-                                                    onChange={(e) => {
-                                                        const newConditions = e.target.checked
-                                                            ? [...profileForm.medicalConditions, condition]
-                                                            : profileForm.medicalConditions.filter(c => c !== condition);
-                                                        setProfileForm(prev => ({
-                                                            ...prev,
-                                                            medicalConditions: newConditions
-                                                        }));
-                                                    }}
-                                                />
-                                                {condition === 'diabetes' ? 'Tiểu đường' :
-                                                    condition === 'heart_disease' ? 'Bệnh tim' :
-                                                        condition === 'allergy' ? 'Dị ứng' : 'Không có'}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="form-section">
-                                    <h3>Sở thích và hạn chế</h3>
-                                    <div className="form-group">
-                                        <label>Sở thích (phân cách bằng dấu phẩy)</label>
-                                        <input
-                                            type="text"
-                                            value={profileForm.preferences.join(', ')}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                preferences: e.target.value.split(',').map(p => p.trim())
-                                            }))}
-                                            placeholder="Ví dụ: Ăn chay, Ít cay, Không đường"
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>Hạn chế (phân cách bằng dấu phẩy)</label>
-                                        <input
-                                            type="text"
-                                            value={profileForm.restrictions.join(', ')}
-                                            onChange={(e) => setProfileForm(prev => ({
-                                                ...prev,
-                                                restrictions: e.target.value.split(',').map(r => r.trim())
-                                            }))}
-                                            placeholder="Ví dụ: Không hải sản, Không sữa"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="form-actions">
-                                    <button type="submit" className="btn-primary">
-                                        Lưu thay đổi
-                                    </button>
-                                </div>
-                            </form>
-                        ) : (
-                            <div className="profile-info">
-                                <div className="info-grid">
-                                    <div className="info-card">
-                                        <h3>Thông tin cơ bản</h3>
-                                        <div className="info-item">
-                                            <span className="label">Tên:</span>
-                                            <span className="value">{user?.name}</span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Email:</span>
-                                            <span className="value">{user?.email}</span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Tuổi:</span>
-                                            <span className="value">{user?.nutritionProfile?.age || 'Chưa cập nhật'} tuổi</span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Giới tính:</span>
-                                            <span className="value">{user?.nutritionProfile?.gender === 'male' ? 'Nam' : user?.nutritionProfile?.gender === 'female' ? 'Nữ' : 'Chưa cập nhật'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="info-card">
-                                        <h3>Thông tin dinh dưỡng</h3>
-                                        <div className="info-item">
-                                            <span className="label">Cân nặng:</span>
-                                            <span className="value">{user?.nutritionProfile?.weight || 'Chưa cập nhật'} kg</span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Chiều cao:</span>
-                                            <span className="value">{user?.nutritionProfile?.height || 'Chưa cập nhật'} cm</span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Nhu cầu calo hàng ngày:</span>
-                                            <span className="value">{user?.nutritionProfile?.dailyCalorieNeeds || 'Chưa cập nhật'} kcal</span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Tỷ lệ dinh dưỡng:</span>
-                                            <span className="value">
-                                                {user?.nutritionProfile?.macroRatio ?
-                                                    `Protein: ${user.nutritionProfile.macroRatio.protein}%, Carbs: ${user.nutritionProfile.macroRatio.carbs}%, Fat: ${user.nutritionProfile.macroRatio.fat}%`
-                                                    : 'Chưa cập nhật'}
-                                            </span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Mức độ hoạt động:</span>
-                                            <span className="value">
-                                                {user?.nutritionProfile?.activityLevel === 'sedentary' ? 'Ít vận động' :
-                                                    user?.nutritionProfile?.activityLevel === 'active' ? 'Vận động vừa phải' :
-                                                        user?.nutritionProfile?.activityLevel === 'veryActive' ? 'Vận động nhiều' : 'Chưa cập nhật'}
-                                            </span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Mục tiêu:</span>
-                                            <span className="value">
-                                                {user?.nutritionProfile?.goals === 'weight_loss' ? 'Giảm cân' :
-                                                    user?.nutritionProfile?.goals === 'muscle_gain' ? 'Tăng cơ' :
-                                                        user?.nutritionProfile?.goals === 'maintenance' ? 'Duy trì' : 'Chưa cập nhật'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="info-card">
-                                        <h3>Tình trạng sức khỏe</h3>
-                                        <div className="info-item">
-                                            <span className="label">Bệnh lý:</span>
-                                            <span className="value">
-                                                {user?.nutritionProfile?.medicalConditions?.length > 0
-                                                    ? user.nutritionProfile.medicalConditions.map(condition =>
-                                                        condition === 'diabetes' ? 'Tiểu đường' :
-                                                            condition === 'heart_disease' ? 'Bệnh tim' :
-                                                                condition === 'allergy' ? 'Dị ứng' : 'Không có'
-                                                    ).join(', ')
-                                                    : 'Chưa cập nhật'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="info-card">
-                                        <h3>Sở thích và hạn chế</h3>
-                                        <div className="info-item">
-                                            <span className="label">Sở thích:</span>
-                                            <span className="value">
-                                                {user?.nutritionProfile?.preferences?.length > 0
-                                                    ? user.nutritionProfile.preferences.join(', ')
-                                                    : 'Chưa cập nhật'}
-                                            </span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="label">Hạn chế:</span>
-                                            <span className="value">
-                                                {user?.nutritionProfile?.restrictions?.length > 0
-                                                    ? user.nutritionProfile.restrictions.join(', ')
-                                                    : 'Chưa cập nhật'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                );
-            case 'savedMenus':
-                return (
-                    <Suspense fallback={<SectionLoading />}>
-                        <SavedMenusPage user={user} />
-                    </Suspense>
-                );
-            default:
-                return null;
-        }
-    };
-
     return (
         <div className="dashboard">
             <header className="dashboard-header">
                 <div className="logo">
-                    <img src="/logo.png" alt="Smart Nutrition" />
-                    <span>Smart Nutrition</span>
+                    <span style={{ fontWeight: 800, fontSize: 32, color: '#228B22', fontFamily: 'inherit' }}>Smart Nutrition</span>
                 </div>
                 <div className="header-right">
-                    <div className="points-display">
-                        <i className="fas fa-star"></i>
-                        <span>{points} điểm</span>
-                    </div>
-                    <div className="notifications">
-                        <i className="fas fa-bell"></i>
+                    <div className="notifications" style={{ position: 'relative' }}>
+                        <i
+                            className="fas fa-bell"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setShowNotifications((v) => !v)}
+                        ></i>
                         <span className="notification-badge">{notifications.length}</span>
+                        {showNotifications && (
+                            <NotificationDropdown
+                                notifications={notifications}
+                                onClose={() => setShowNotifications(false)}
+                            />
+                        )}
                     </div>
                     <button onClick={handleLogout} className="btn-logout">
                         <i className="fas fa-sign-out-alt"></i> Đăng xuất
@@ -643,55 +445,49 @@ const Dashboard = () => {
                     <nav className="sidebar-nav">
                         <button
                             className={activeSection === 'overview' ? 'active' : ''}
-                            onClick={() => setActiveSection('overview')}
+                            onClick={() => handleSectionChange('overview')}
                         >
                             <i className="fas fa-home"></i> Tổng quan
                         </button>
                         <button
                             className={activeSection === 'nutrition' ? 'active' : ''}
-                            onClick={() => setActiveSection('nutrition')}
+                            onClick={() => handleSectionChange('nutrition')}
                         >
                             <i className="fas fa-utensils"></i> Dinh dưỡng
                         </button>
                         <button
                             className={activeSection === 'menu' ? 'active' : ''}
-                            onClick={() => setActiveSection('menu')}
+                            onClick={() => handleSectionChange('menu')}
                         >
                             <i className="fas fa-list"></i> Thực đơn
                         </button>
                         <button
                             className={activeSection === 'progress' ? 'active' : ''}
-                            onClick={() => setActiveSection('progress')}
+                            onClick={() => handleSectionChange('progress')}
                         >
                             <i className="fas fa-chart-line"></i> Tiến độ
                         </button>
                         <button
                             className={activeSection === 'ai' ? 'active' : ''}
-                            onClick={() => setActiveSection('ai')}
+                            onClick={() => handleSectionChange('ai')}
                         >
                             <i className="fas fa-robot"></i> Tư vấn AI
                         </button>
                         <button
                             className={activeSection === 'shopping' ? 'active' : ''}
-                            onClick={() => setActiveSection('shopping')}
+                            onClick={() => handleSectionChange('shopping')}
                         >
                             <i className="fas fa-shopping-cart"></i> Mua sắm
                         </button>
                         <button
-                            className={activeSection === 'community' ? 'active' : ''}
-                            onClick={() => setActiveSection('community')}
-                        >
-                            <i className="fas fa-users"></i> Cộng đồng
-                        </button>
-                        <button
                             className={activeSection === 'profile' ? 'active' : ''}
-                            onClick={() => setActiveSection('profile')}
+                            onClick={() => handleSectionChange('profile')}
                         >
                             <i className="fas fa-user"></i> Hồ sơ cá nhân
                         </button>
                         <button
                             className={activeSection === 'savedMenus' ? 'active' : ''}
-                            onClick={() => setActiveSection('savedMenus')}
+                            onClick={() => handleSectionChange('savedMenus')}
                         >
                             <i className="fas fa-folder-open"></i> Thực đơn đã lưu
                         </button>
@@ -699,11 +495,15 @@ const Dashboard = () => {
                 </div>
 
                 <div className="dashboard-main">
-                    {renderSection()}
+                    {isPending ? (
+                        <SectionLoading />
+                    ) : (
+                        renderedSection
+                    )}
                 </div>
             </main>
         </div>
     );
 };
 
-export default Dashboard; 
+export default React.memo(Dashboard); 

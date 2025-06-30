@@ -10,7 +10,7 @@ const foodSchema = new mongoose.Schema({
     preferences: [{ type: String }], // Ví dụ: ["spicy", "vegan"]
     restrictions: [{ type: String }], // Ví dụ: ["no_peanuts", "low_sugar"]
     context: {
-        mealTime: [{ type: String, enum: ['breakfast', 'lunch', 'dinner', 'snack'] }],
+        mealTime: [{ type: String, enum: ['breakfast', 'lunch', 'dinner', 'snack', 'dessert'] }],
         season: { type: String, enum: ['spring', 'summer', 'autumn', 'winter'] },
         weather: { type: String, enum: ['hot', 'cold', 'rainy'] }
     },

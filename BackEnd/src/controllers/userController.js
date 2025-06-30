@@ -1,8 +1,9 @@
 const User = require('../models/user');
-const Food = require('../models/Food');
-const Menu = require('../models/Menu');
+const Food = require('../models/food');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const { sendEmail } = require('../services/emailService');
+const crypto = require('crypto');
 
 // Utility functions
 const calculateNutritionProfile = (userData) => {
@@ -105,6 +106,9 @@ exports.register = async (req, res) => {
         const validRoles = ['user', 'admin', 'nutritionist'];
         const userRole = validRoles.includes(role) ? role : 'user';
 
+        // Tạo verification token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+
         // Create new user
         console.log('Backend: Creating new user...');
         const user = new User({
@@ -117,7 +121,9 @@ exports.register = async (req, res) => {
                 medicalConditions: ['none'],
                 preferences: [],
                 restrictions: []
-            }
+            },
+            isVerified: false,
+            verificationToken
         });
 
         // Save user to database
@@ -125,23 +131,24 @@ exports.register = async (req, res) => {
         await user.save();
         console.log('Backend: User saved successfully with ID:', user._id);
 
-        // Generate token
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        // Gửi email xác thực
+        try {
+            console.log('Backend: Sending verification email...');
+            const verifyLink = `http://localhost:8888/verify-email?token=${verificationToken}`;
+            await sendEmail(user.email, verificationToken, verifyLink, 'verify');
+            console.log('Backend: Verification email sent successfully');
+        } catch (error) {
+            console.error('Backend: Error sending verification email:', error);
+            // Xóa user nếu gửi email thất bại
+            await User.findByIdAndDelete(user._id);
+            return res.status(500).json({
+                message: 'Lỗi khi gửi email xác thực. Vui lòng thử lại sau.'
+            });
+        }
 
-        // Return success response
-        console.log('Backend: Registration successful, sending response...');
+        // Không trả token đăng nhập ngay
         res.status(201).json({
-            message: 'Đăng ký thành công',
-            token,
-            user: {
-                id: user._id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                nutritionProfile: user.nutritionProfile,
-                avatar: user.avatar,
-                createdAt: user.createdAt
-            }
+            message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.'
         });
     } catch (error) {
         console.error('Backend: Registration error:', {
@@ -171,23 +178,30 @@ exports.register = async (req, res) => {
 // Hàm xử lý đăng nhập
 exports.login = async (req, res) => {
     const { email, password } = req.body;
+    console.log('[LOGIN] Nhận request với email:', email, '| password:', password);
 
     try {
         if (!email || !password) {
+            console.log('[LOGIN] Thiếu email hoặc mật khẩu');
             return res.status(400).json({ message: 'Vui lòng cung cấp email và mật khẩu' });
         }
 
         const user = await User.findOne({ email });
         if (!user) {
+            console.log('[LOGIN] Không tìm thấy user với email:', email);
             return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
         }
+        console.log('[LOGIN] Tìm thấy user:', user.email, '| role:', user.role, '| isVerified:', user.isVerified);
 
         const isMatch = await user.comparePassword(password);
+        console.log('[LOGIN] Kết quả so sánh mật khẩu:', isMatch);
         if (!isMatch) {
+            console.log('[LOGIN] Sai mật khẩu cho user:', email);
             return res.status(401).json({ message: 'Email hoặc mật khẩu không đúng' });
         }
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        console.log('[LOGIN] Đăng nhập thành công cho user:', email);
 
         res.status(200).json({
             token,
@@ -196,11 +210,12 @@ exports.login = async (req, res) => {
                 email: user.email,
                 name: user.name,
                 role: user.role,
-                nutritionProfile: user.nutritionProfile
+                nutritionProfile: user.nutritionProfile,
+                isVerified: user.isVerified
             },
         });
     } catch (error) {
-        console.error('Lỗi khi đăng nhập:', error.message);
+        console.error('[LOGIN] Lỗi khi đăng nhập:', error.message);
         res.status(500).json({ message: 'Lỗi server, vui lòng thử lại' });
     }
 };
@@ -300,7 +315,7 @@ exports.createProfile = async (req, res) => {
 // Hàm cập nhật hồ sơ dinh dưỡng
 exports.updateProfile = async (req, res) => {
     try {
-        const { age, weight, height, gender, activityLevel, goals, medicalConditions, preferences, restrictions } = req.body;
+        const { age, weight, height, gender, activityLevel, goals, medicalConditions, preferences, restrictions, avatar } = req.body;
 
         const user = await User.findById(req.user._id);
         if (!user) {
@@ -311,7 +326,7 @@ exports.updateProfile = async (req, res) => {
             return res.status(400).json({ message: 'Hồ sơ dinh dưỡng chưa được tạo' });
         }
 
-        // Merge existing profile with updates, using nullish coalescing for numbers
+        // Merge existing profile with updates
         const updatedProfile = {
             ...user.nutritionProfile,
             age: age !== undefined ? Number(age) : user.nutritionProfile.age,
@@ -347,12 +362,17 @@ exports.updateProfile = async (req, res) => {
             isComplete: true
         };
 
+        // Cập nhật avatar nếu có
+        if (avatar) {
+            user.avatar = avatar;
+        }
+
         await user.save();
-        console.log('Profile updated successfully:', user.nutritionProfile);
 
         res.status(200).json({
             message: 'Cập nhật hồ sơ dinh dưỡng thành công',
-            profile: user.nutritionProfile
+            profile: user.nutritionProfile,
+            avatar: user.avatar
         });
     } catch (error) {
         console.error('Lỗi khi cập nhật hồ sơ dinh dưỡng:', error.message);
@@ -572,3 +592,140 @@ exports.getSimilarFoods = async (req, res) => {
         res.status(500).json({ message: 'Lỗi server khi tìm món ăn phù hợp' });
     }
 };
+
+// Hàm xác thực email
+exports.verifyEmail = async (req, res) => {
+    const { token } = req.query;
+    console.log('==== VERIFY EMAIL ====');
+    console.log('Token nhận được:', token);
+    if (!token) {
+        console.log('Không có token trong query');
+        return res.status(400).json({ message: 'Thiếu token xác thực' });
+    }
+    try {
+        const user = await User.findOne({ verificationToken: token });
+        console.log('User tìm được:', user);
+        if (!user) {
+            // Nếu không tìm thấy user với token, kiểm tra xem có user nào đã xác thực với token này không
+            const alreadyVerified = await User.findOne({ isVerified: true, verificationToken: { $exists: false } });
+            if (alreadyVerified) {
+                console.log('User đã xác thực với token này');
+                return res.json({ message: 'Email đã được xác thực, bạn có thể đăng nhập.' });
+            }
+            console.log('Không tìm thấy user với token này');
+            return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+        }
+        user.isVerified = true;
+        user.verificationToken = undefined;
+        await user.save();
+        console.log('Xác thực thành công, user đã được cập nhật:', user.email);
+        res.json({ message: 'Xác thực email thành công. Bạn có thể đăng nhập.' });
+    } catch (error) {
+        console.error('Lỗi khi xác thực email:', error);
+        res.status(500).json({ message: 'Lỗi server khi xác thực email' });
+    }
+};
+
+exports.getTotalUsers = async (req, res) => {
+    try {
+        console.log('[GET_TOTAL_USERS] Đang đếm tổng số tài khoản user...');
+        const totalUsers = await User.countDocuments();
+        console.log('[GET_TOTAL_USERS] Tổng số tài khoản user:', totalUsers);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalUsers
+            }
+        });
+    } catch (error) {
+        console.error('[GET_TOTAL_USERS] Lỗi khi đếm số lượng user:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error getting total users',
+            error: error.message
+        });
+    }
+};
+
+// Gửi email quên mật khẩu
+exports.forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    try {
+        if (!email) {
+            return res.status(400).json({ message: 'Vui lòng nhập email' });
+        }
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'Không tìm thấy tài khoản với email này' });
+        }
+        // Tạo token reset password
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 phút
+        await user.save();
+        // Gửi email (bạn cần chỉnh lại hàm gửi email cho phù hợp)
+        const resetLink = `http://localhost:8888/reset-password?token=${resetToken}`;
+        await sendEmail(user.email, resetToken, resetLink, 'reset');
+        res.status(200).json({ message: 'Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra email.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+};
+
+// Đặt lại mật khẩu
+exports.resetPassword = async (req, res) => {
+    const { token, password } = req.body;
+    try {
+        if (!token || !password) {
+            return res.status(400).json({ message: 'Thiếu token hoặc mật khẩu mới' });
+        }
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+        if (!user) {
+            return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+        }
+        user.password = password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+        res.status(200).json({ message: 'Đặt lại mật khẩu thành công' });
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+};
+
+// Đổi mật khẩu
+exports.changePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id; // Lấy từ middleware protect
+
+    try {
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: 'Vui lòng cung cấp mật khẩu hiện tại và mật khẩu mới' });
+        }
+
+        const user = await User.findById(userId).select('+password');
+        if (!user) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+        }
+
+        // Kiểm tra mật khẩu hiện tại
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Mật khẩu hiện tại không đúng' });
+        }
+
+        // Cập nhật mật khẩu mới
+        user.password = newPassword;
+        await user.save();
+
+        res.status(200).json({ success: true, message: 'Đổi mật khẩu thành công' });
+
+    } catch (error) {
+        res.status(500).json({ message: 'Lỗi server', error: error.message });
+    }
+};
+

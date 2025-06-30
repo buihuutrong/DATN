@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './AISection.css';
+import { chatWithAI } from '../../../services/api';
 
 const AISection = ({ user }) => {
     const [message, setMessage] = useState('');
@@ -22,15 +23,19 @@ const AISection = ({ user }) => {
         setChatHistory(prev => [...prev, userMessage]);
         setMessage('');
 
-        // TODO: Implement AI response
-        // Mock AI response for now
-        setTimeout(() => {
+        try {
+            const aiAnswer = await chatWithAI([...chatHistory, userMessage], user); // user là hồ sơ người dùng
             const aiResponse = {
                 role: 'ai',
-                content: 'Tôi đang xử lý câu hỏi của bạn. Tính năng này sẽ được cập nhật sớm!'
+                content: aiAnswer
             };
             setChatHistory(prev => [...prev, aiResponse]);
-        }, 1000);
+        } catch (err) {
+            setChatHistory(prev => [...prev, {
+                role: 'ai',
+                content: 'Xin lỗi, hệ thống AI đang bận. Vui lòng thử lại sau.'
+            }]);
+        }
     };
 
     return (
